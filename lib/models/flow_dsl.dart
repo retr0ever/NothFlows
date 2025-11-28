@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// Represents a single action in a flow
+/// Represents a single accessibility action in a flow
 class FlowAction {
   final String type;
   final Map<String, dynamic> parameters;
@@ -32,31 +32,90 @@ class FlowAction {
   String toString() => 'FlowAction(type: $type, params: $parameters)';
 }
 
-/// DSL representation of a flow automation
+/// Represents conditions that trigger a flow
+/// Supports sensory and context-based triggers
+class FlowConditions {
+  final String? ambientLight; // 'low', 'medium', 'high'
+  final String? noiseLevel; // 'quiet', 'moderate', 'loud'
+  final String? deviceMotion; // 'still', 'walking', 'shaky'
+  final List<String>? recentUsage; // Recently used apps
+  final String? timeOfDay; // 'morning', 'afternoon', 'evening', 'night'
+  final int? batteryLevel; // 0-100
+  final bool? isCharging;
+
+  FlowConditions({
+    this.ambientLight,
+    this.noiseLevel,
+    this.deviceMotion,
+    this.recentUsage,
+    this.timeOfDay,
+    this.batteryLevel,
+    this.isCharging,
+  });
+
+  factory FlowConditions.fromJson(Map<String, dynamic> json) {
+    return FlowConditions(
+      ambientLight: json['ambient_light'] as String?,
+      noiseLevel: json['noise_level'] as String?,
+      deviceMotion: json['device_motion'] as String?,
+      recentUsage: (json['recent_usage'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      timeOfDay: json['time_of_day'] as String?,
+      batteryLevel: json['battery_level'] as int?,
+      isCharging: json['is_charging'] as bool?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    if (ambientLight != null) map['ambient_light'] = ambientLight;
+    if (noiseLevel != null) map['noise_level'] = noiseLevel;
+    if (deviceMotion != null) map['device_motion'] = deviceMotion;
+    if (recentUsage != null) map['recent_usage'] = recentUsage;
+    if (timeOfDay != null) map['time_of_day'] = timeOfDay;
+    if (batteryLevel != null) map['battery_level'] = batteryLevel;
+    if (isCharging != null) map['is_charging'] = isCharging;
+    return map;
+  }
+
+  bool get isEmpty => ambientLight == null && noiseLevel == null &&
+      deviceMotion == null && recentUsage == null && timeOfDay == null &&
+      batteryLevel == null && isCharging == null;
+
+  @override
+  String toString() => 'FlowConditions(${toJson()})';
+}
+
+/// DSL representation of an accessibility automation flow
+/// Supports conditional triggers based on sensory and context data
 class FlowDSL {
   final String trigger;
+  final FlowConditions? conditions;
   final List<FlowAction> actions;
   final String? id;
   final DateTime? createdAt;
 
   FlowDSL({
     required this.trigger,
+    this.conditions,
     required this.actions,
     this.id,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  /// Validates the DSL structure
+  /// Validates the DSL structure for accessibility flows
   bool isValid() {
     if (trigger.isEmpty) return false;
     if (actions.isEmpty) return false;
 
-    // Validate trigger format: "mode.on:modeName" or "mode.off:modeName"
-    final triggerPattern = RegExp(r'^mode\.(on|off):(sleep|focus|custom)$');
+    // Validate trigger format: "assistive_mode.on:modeName" or "assistive_mode.off:modeName"
+    final triggerPattern = RegExp(r'^(mode|assistive_mode)\.(on|off):(vision|motor|neurodivergent|calm|hearing|custom|sleep|focus)$');
     if (!triggerPattern.hasMatch(trigger)) return false;
 
-    // Validate each action has a valid type
+    // Validate each action has a valid type (expanded for accessibility)
     final validActionTypes = {
+      // Original actions
       'clean_screenshots',
       'clean_downloads',
       'mute_apps',
@@ -67,6 +126,25 @@ class FlowDSL {
       'disable_bluetooth',
       'set_wallpaper',
       'launch_app',
+      // New accessibility actions
+      'increase_text_size',
+      'increase_contrast',
+      'enable_screen_reader',
+      'reduce_animation',
+      'boost_brightness',
+      'reduce_gesture_sensitivity',
+      'enable_voice_typing',
+      'enable_live_transcribe',
+      'simplify_home_screen',
+      'mute_distraction_apps',
+      'highlight_focus_apps',
+      'launch_care_app',
+      'enable_high_visibility',
+      'enable_captions',
+      'flash_screen_alerts',
+      'boost_haptic_feedback',
+      'enable_one_handed_mode',
+      'increase_touch_targets',
     };
 
     for (final action in actions) {
@@ -86,6 +164,9 @@ class FlowDSL {
   factory FlowDSL.fromJson(Map<String, dynamic> json) {
     return FlowDSL(
       trigger: json['trigger'] as String,
+      conditions: json['conditions'] != null
+          ? FlowConditions.fromJson(json['conditions'] as Map<String, dynamic>)
+          : null,
       actions: (json['actions'] as List<dynamic>)
           .map((a) => FlowAction.fromJson(a as Map<String, dynamic>))
           .toList(),
@@ -100,6 +181,7 @@ class FlowDSL {
   Map<String, dynamic> toJson() {
     return {
       'trigger': trigger,
+      if (conditions != null && !conditions!.isEmpty) 'conditions': conditions!.toJson(),
       'actions': actions.map((a) => a.toJson()).toList(),
       if (id != null) 'id': id,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
@@ -165,12 +247,14 @@ class FlowDSL {
 
   FlowDSL copyWith({
     String? trigger,
+    FlowConditions? conditions,
     List<FlowAction>? actions,
     String? id,
     DateTime? createdAt,
   }) {
     return FlowDSL(
       trigger: trigger ?? this.trigger,
+      conditions: conditions ?? this.conditions,
       actions: actions ?? this.actions,
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,

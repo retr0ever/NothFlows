@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'services/storage_service.dart';
 import 'services/cactus_llm_service.dart';
 import 'screens/home_screen.dart';
@@ -221,18 +222,14 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App icon (placeholder)
-              Container(
+              // App icon - NothFlows logo
+              SizedBox(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5B4DFF).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFF5B4DFF),
-                  size: 40,
+                child: SvgPicture.asset(
+                  'assets/icons/nothflows_logo.svg',
+                  width: 80,
+                  height: 80,
                 ),
               ),
 
