@@ -10,7 +10,7 @@ For example: “When I switch to Sleep flow, clean screenshots older than 30 day
 
 Most Nothing users today are tech enthusiasts, so NothFlows doubles as a playful “mini n8n” for power users while also making automation accessible to non‑technical users who just want to describe what they need in plain language.
 
-The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks—100% offline.
+The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks — 100% offline.
 
 
 ### Key Features
@@ -269,10 +269,6 @@ print(flow.getDescription());
 
 MIT
 
-## Support
-
-For issues or questions, please open an issue on GitHub.
-
 ---
 
-Built with ❤️ for Nothing Phone users
+Built with ❤️ for Nothing users by Team Lotus
