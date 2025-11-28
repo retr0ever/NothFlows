@@ -1,12 +1,17 @@
 # NothFlows
 
-Smart-modes micro-automation app for Nothing Phones, powered by on-device AI.
+NothFlows upgrades Sleep, Focus and Custom modes into smart, on‑device automations that run entirely on your Nothing Phone.
 
 ![NothFlows logo](assets/branding/logoBanner.png)
 
-## Overview
+It extends familiar features like Do Not Disturb into full automation flows you set up just by saying what you want, instead of tapping through settings.
 
-NothFlows allows you to create intelligent automation flows using natural language. The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks—100% offline.
+For example: “When I switch to Sleep flow, clean screenshots older than 30 days and lower brightness to 20%.”
+
+Most Nothing users today are tech enthusiasts, so NothFlows doubles as a playful “mini n8n” for power users while also making automation accessible to non‑technical users who just want to describe what they need in plain language.
+
+The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks—100% offline.
+
 
 ### Key Features
 
