@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'services/storage_service.dart';
 import 'services/cactus_llm_service.dart';
 import 'screens/home_screen.dart';
+import 'screens/permissions_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,11 @@ void main() async {
 
 class NothFlowsApp extends StatelessWidget {
   const NothFlowsApp({super.key});
+
+  // Nothing OS brand colours
+  static const Color nothingRed = Color(0xFFD71921);
+  static const Color nothingWhite = Color(0xFFFFFFFF);
+  static const Color nothingDarkGrey = Color(0xFF1A1A1A);
 
   @override
   Widget build(BuildContext context) {
@@ -176,28 +182,29 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _initialiseApp() async {
     try {
-      // Pre-warm the LLM service (optional, speeds up first use)
-      // Uncomment if you want to load the model on startup
-      // await CactusLLMService().initialise();
+      // Pre-warm the LLM service in background (speeds up first use)
+      CactusLLMService().initialise().catchError((e) {
+        debugPrint('[Main] LLM init error (non-fatal): $e');
+      });
 
       // Wait for animation to complete
       await Future.delayed(const Duration(seconds: 2));
 
-      // Navigate to home
+      // Navigate to permissions screen
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
+            builder: (context) => const PermissionsScreen(),
           ),
         );
       }
     } catch (e) {
       debugPrint('Error initialising app: $e');
-      // Still navigate even if LLM init fails
+      // Still navigate even if init fails
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
+            builder: (context) => const PermissionsScreen(),
           ),
         );
       }

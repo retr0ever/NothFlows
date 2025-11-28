@@ -16,45 +16,26 @@ class CactusLLMService {
   bool _isLoading = false;
 
   /// System prompt that enforces DSL output format
-  static const String systemPrompt = '''You are a JSON DSL generator for mobile automation.
-Your ONLY job is to convert natural language instructions into valid JSON.
+  static const String systemPrompt = '''Convert to JSON. Output ONLY the JSON, nothing else.
 
-DSL Schema:
-{
-  "trigger": "mode.on:<mode_name>",
-  "actions": [
-    { "type": "<action_type>", "<param>": <value> }
-  ]
-}
+Schema: {"trigger": "mode.on:MODE", "actions": [{"type": "TYPE", "param": value}]}
 
-Valid modes: sleep, focus, custom
-Valid action types and their parameters:
-- clean_screenshots: older_than_days (number)
-- clean_downloads: older_than_days (number)
-- mute_apps: apps (array of strings)
-- lower_brightness: to (number 0-100)
-- set_volume: level (number 0-100)
+Actions:
+- clean_screenshots: older_than_days
+- clean_downloads: older_than_days
+- mute_apps: apps
+- lower_brightness: to
+- set_volume: level
 - enable_dnd: (no params)
 - disable_wifi: (no params)
 - disable_bluetooth: (no params)
-- set_wallpaper: path (string)
-- launch_app: app (string)
+- set_wallpaper: path
+- launch_app: app
 
-CRITICAL RULES:
-1. Output ONLY valid JSON, no explanations
-2. Always include "trigger" and "actions"
-3. Use only the action types listed above
-4. Return empty actions array if unclear: {"trigger": "mode.on:custom", "actions": []}
+Example: "lower brightness to 20"
+Output: {"trigger": "mode.on:custom", "actions": [{"type": "lower_brightness", "to": 20}]}
 
-Example input: "When sleep mode is on, clean old screenshots and lower brightness to 20"
-Example output:
-{
-  "trigger": "mode.on:sleep",
-  "actions": [
-    { "type": "clean_screenshots", "older_than_days": 30 },
-    { "type": "lower_brightness", "to": 20 }
-  ]
-}''';
+NO explanations. NO thinking. ONLY JSON.''';
 
   /// Initialise the Qwen3 0.6B model
   Future<void> initialise() async {
@@ -105,17 +86,23 @@ Example output:
     required String instruction,
     required String mode,
   }) async {
+    // Always try to initialize if not ready
     if (!isReady) {
-      await initialise();
+      try {
+        await initialise();
+      } catch (e) {
+        debugPrint('[CactusLLM] Initialization failed, using simulation mode: $e');
+      }
     }
 
     // Use simulation parser if no LLM instance (Desktop or fallback)
     if (_llm == null) {
+      debugPrint('[CactusLLM] Using simulation mode (no LLM instance)');
       return _simulateParse(instruction, mode);
     }
 
     try {
-      debugPrint('[CactusLLM] Parsing instruction: $instruction');
+      debugPrint('[CactusLLM] Parsing instruction with real LLM: $instruction');
 
       // Build the messages
       final messages = [
@@ -139,7 +126,16 @@ Generate the DSL JSON:'''),
       // Extract and clean JSON from response
       String jsonText = result.response.trim();
 
-      // Find JSON boundaries
+      // First, remove think tags and their content
+      jsonText = jsonText.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '');
+
+      // Remove trailing tokens like <|im_end|>
+      jsonText = jsonText.replaceAll(RegExp(r'<\|.*?\|>'), '');
+
+      // Trim again after removing tags
+      jsonText = jsonText.trim();
+
+      // Find JSON boundaries - look for the outermost braces
       final startIdx = jsonText.indexOf('{');
       final endIdx = jsonText.lastIndexOf('}');
 
@@ -149,6 +145,10 @@ Generate the DSL JSON:'''),
       }
 
       jsonText = jsonText.substring(startIdx, endIdx + 1);
+
+      // Sanitize JSON - fix common LLM mistakes
+      jsonText = _sanitizeJson(jsonText);
+      debugPrint('[CactusLLM] Sanitized JSON: $jsonText');
 
       // Parse the DSL
       final dsl = FlowDSL.fromJsonString(jsonText);
@@ -162,34 +162,43 @@ Generate the DSL JSON:'''),
       debugPrint('[CactusLLM] Successfully parsed DSL: ${dsl.trigger}');
       return dsl;
     } catch (e) {
-      debugPrint('[CactusLLM] Error parsing instruction: $e');
-      return null;
+      debugPrint('[CactusLLM] Error parsing with LLM: $e, falling back to simulation');
+      // Fall back to simulation mode if LLM parsing fails
+      return _simulateParse(instruction, mode);
     }
   }
 
   /// Simple keyword-based parser for simulation mode
   Future<FlowDSL?> _simulateParse(String instruction, String mode) async {
     debugPrint('[CactusLLM] Simulating parse for: $instruction');
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulate latency
+    await Future.delayed(const Duration(milliseconds: 300)); // Simulate latency
 
     final lower = instruction.toLowerCase();
     final actions = <Map<String, dynamic>>[];
 
+    // Extract numbers from instruction
+    final numberMatch = RegExp(r'(\d+)').firstMatch(instruction);
+    final extractedNumber = numberMatch != null ? int.parse(numberMatch.group(1)!) : null;
+
     // Heuristic matching for common actions
     if (lower.contains('screenshot')) {
-      actions.add({'type': 'clean_screenshots', 'older_than_days': 30});
+      final days = extractedNumber ?? 30;
+      actions.add({'type': 'clean_screenshots', 'older_than_days': days});
     }
     if (lower.contains('download')) {
-      actions.add({'type': 'clean_downloads', 'older_than_days': 30});
+      final days = extractedNumber ?? 30;
+      actions.add({'type': 'clean_downloads', 'older_than_days': days});
     }
     if (lower.contains('mute')) {
       actions.add({'type': 'mute_apps', 'apps': ['Instagram', 'TikTok']});
     }
     if (lower.contains('brightness')) {
-      actions.add({'type': 'lower_brightness', 'to': 20});
+      final level = extractedNumber ?? 20;
+      actions.add({'type': 'lower_brightness', 'to': level});
     }
     if (lower.contains('volume')) {
-      actions.add({'type': 'set_volume', 'level': 30});
+      final level = extractedNumber ?? 30;
+      actions.add({'type': 'set_volume', 'level': level});
     }
     if (lower.contains('dnd') || lower.contains('disturb')) {
       actions.add({'type': 'enable_dnd'});
@@ -281,6 +290,35 @@ Generate the DSL JSON:'''),
       mode: 'custom',
     );
     debugPrint('[CactusLLM] Warm-up complete');
+  }
+
+  /// Sanitize JSON output from LLM to fix common formatting issues
+  String _sanitizeJson(String json) {
+    // Fix incorrectly escaped quotes (e.g., "@param\" -> "param")
+    json = json.replaceAll(RegExp(r'@([a-zA-Z_][a-zA-Z0-9_]*)\\"'), r'$1"');
+
+    // Fix common hallucinations where LLM uses "param" instead of proper parameter names
+    // For lower_brightness, the parameter should be "to", not "param"
+    json = json.replaceAll(RegExp(r'"param"\s*:\s*\[\s*(\d+)\s*\]'), r'"to": $1');
+
+    // Fix unquoted property names (e.g., to: 50 -> "to": 50)
+    // Only match at start of line or after comma/brace, to avoid matching colons in string values
+    json = json.replaceAllMapped(
+      RegExp(r'([\[{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*', multiLine: true),
+      (match) => '${match.group(1)}"${match.group(2)}": ',
+    );
+
+    // Fix single quotes to double quotes for strings
+    json = json.replaceAll("'", '"');
+
+    // Remove any trailing commas before closing braces/brackets
+    json = json.replaceAll(RegExp(r',\s*([}\]])'), r'$1');
+
+    // Remove any comments (// or /* */)
+    json = json.replaceAll(RegExp(r'//.*?$', multiLine: true), '');
+    json = json.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
+
+    return json.trim();
   }
 
   /// Dispose resources

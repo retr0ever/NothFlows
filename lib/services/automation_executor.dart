@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_apps/device_apps.dart';
-import 'package:screen_brightness/screen_brightness.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/flow_dsl.dart';
 
@@ -29,6 +29,9 @@ class AutomationExecutor {
   static final AutomationExecutor _instance = AutomationExecutor._internal();
   factory AutomationExecutor() => _instance;
   AutomationExecutor._internal();
+
+  // MethodChannel for native Android system control
+  static const platform = MethodChannel('com.nothflows/system');
 
   // Flag to bypass actual execution on non-Android platforms
   bool get _isSimulation => !Platform.isAndroid;
@@ -314,27 +317,43 @@ class AutomationExecutor {
     final level = (params['to'] as int? ?? 50).clamp(0, 100);
 
     try {
-      // Request permission to modify settings
-      final canWrite = await Permission.systemAlertWindow.request();
-      if (!canWrite.isGranted) {
+      // First check if we have WRITE_SETTINGS permission
+      final canWrite = await platform.invokeMethod<bool>('canWriteSettings');
+
+      if (canWrite != true) {
+        // Request permission
+        await platform.invokeMethod('requestWriteSettings');
+
         return ExecutionResult(
           actionType: 'lower_brightness',
           success: false,
-          message: 'Permission to modify settings denied',
+          message: 'WRITE_SETTINGS permission required. Please grant permission and try again.',
         );
       }
 
-      // Set brightness (0.0 to 1.0)
-      final brightness = level / 100.0;
-      await ScreenBrightness().setScreenBrightness(brightness);
+      // Use native Android API to set brightness
+      final success = await platform.invokeMethod<bool>('setBrightness', {
+        'brightness': level,
+      });
 
-      return ExecutionResult(
-        actionType: 'lower_brightness',
-        success: true,
-        message: 'Set brightness to $level%',
-        data: {'level': level},
-      );
+      if (success == true) {
+        debugPrint('[Executor] Set screen brightness to $level% via native API');
+
+        return ExecutionResult(
+          actionType: 'lower_brightness',
+          success: true,
+          message: 'Set brightness to $level%',
+          data: {'level': level},
+        );
+      } else {
+        return ExecutionResult(
+          actionType: 'lower_brightness',
+          success: false,
+          message: 'Failed to set brightness (permission denied)',
+        );
+      }
     } catch (e) {
+      debugPrint('[Executor] Error setting brightness: $e');
       return ExecutionResult(
         actionType: 'lower_brightness',
         success: false,
@@ -343,19 +362,40 @@ class AutomationExecutor {
     }
   }
 
-  /// Set system volume (stub - requires platform channel)
+  /// Set system volume
   Future<ExecutionResult> _setVolume(Map<String, dynamic> params) async {
     final level = (params['level'] as int? ?? 50).clamp(0, 100);
 
-    // This requires a platform channel to Android's AudioManager
-    // Stub implementation for now
+    try {
+      // Use native Android API to set volume
+      final success = await platform.invokeMethod<bool>('setVolume', {
+        'level': level,
+      });
 
-    return ExecutionResult(
-      actionType: 'set_volume',
-      success: true,
-      message: 'Set volume to $level%',
-      data: {'level': level},
-    );
+      if (success == true) {
+        debugPrint('[Executor] Set system volume to $level% via native API');
+
+        return ExecutionResult(
+          actionType: 'set_volume',
+          success: true,
+          message: 'Set volume to $level%',
+          data: {'level': level},
+        );
+      } else {
+        return ExecutionResult(
+          actionType: 'set_volume',
+          success: false,
+          message: 'Failed to set volume',
+        );
+      }
+    } catch (e) {
+      debugPrint('[Executor] Error setting volume: $e');
+      return ExecutionResult(
+        actionType: 'set_volume',
+        success: false,
+        message: 'Error: $e',
+      );
+    }
   }
 
   /// Enable Do Not Disturb (stub - requires system permissions)
