@@ -2,7 +2,7 @@
 
 Smart-modes micro-automation app for Nothing Phones, powered by on-device AI.
 
-![NothFlows logo](assets/branding/nothflows-logo.png)
+![NothFlows logo](assets/branding/logoBanner.png)
 
 ## Overview
 

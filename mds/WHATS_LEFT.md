@@ -111,7 +111,7 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  image_path: "assets/icon/app_icon.png"
+  image_path: "assets/nothflows1024x1024.png"
 ```
 
 Then create a 1024x1024 PNG icon and run:
