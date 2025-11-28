@@ -1,0 +1,47 @@
+name: nothflows
+description: Smart-modes micro-automation app for Nothing Phones with on-device AI
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Cactus SDK for on-device AI
+  cactus: ^1.0.2
+
+  # State management
+  provider: ^6.1.1
+
+  # Local storage
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Utilities
+  path_provider: ^2.1.1
+  permission_handler: ^12.0.1
+  device_apps: ^2.2.0
+  screen_brightness: ^0.2.2+1
+
+  # UI
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.6
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+    - assets/models/
