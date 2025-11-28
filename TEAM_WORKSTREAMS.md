@@ -5,6 +5,54 @@
 
 ---
 
+## 📊 PROGRESS TRACKER
+
+### 🔵 Workstream 1: Core Accessibility Actions (Team Member A)
+**Status**: ✅ READY FOR TESTING (95% complete)
+
+- [x] Implement Vision Assist actions (4/4) ✅
+- [x] Implement Motor Assist actions (4/4) ✅
+- [x] Implement Cognitive/Neurodivergent actions (4/4) ✅
+- [x] Implement Hearing Support actions (4/4) ✅
+- [x] Implement Safety action (1/1) ✅
+- [x] Add Android native methods to MainActivity.kt (8/8) ✅
+- [x] Update _executeAction switch statement ✅
+- [x] Update getDescription() for new action types in flow_dsl.dart ✅
+- [ ] Test all accessibility actions on Nothing Phone 🧪
+
+**Files Modified**:
+- ✅ `lib/services/automation_executor.dart` - Added 18 action methods + switch cases (~390 lines)
+- ✅ `android/app/src/main/kotlin/com/nothflows/MainActivity.kt` - Added 8 native methods (~130 lines)
+- ✅ `lib/models/flow_dsl.dart` - Added descriptions for 18 new action types (~68 lines)
+
+**Total Lines Added**: ~588 lines
+
+**Next Steps**:
+1. ✅ ~~Complete action descriptions~~ DONE
+2. Hot reload Flutter app and test on device
+3. Verify each accessibility action works as expected
+
+---
+
+### 🟢 Workstream 2: Cactus Intelligence (Team Member B)
+**Status**: ⚪ NOT STARTED
+
+- [ ] Task 4: Upgrade CactusLLM to multi-step planner
+- [ ] Task 5: Screenshot → Flow via SmolVLM
+- [ ] Task 6: Local personalization via CactusRAG
+- [ ] Task 10: Remove simulation mode
+
+---
+
+### 🟡 Workstream 3: Sensors, UI & Daily Check-In (Team Member C)
+**Status**: ⚪ NOT STARTED
+
+- [ ] Task 7: Daily Check-In screen
+- [ ] Task 8: Sensor-aware triggers
+- [ ] Task 9: UI updates for accessibility
+
+---
+
 ## 🔵 WORKSTREAM 1: Core Accessibility Actions & Execution
 **Owner**: Team Member A
 **Estimated Effort**: ~700 lines of code

@@ -238,6 +238,73 @@ class FlowDSL {
           final app = action.parameters['app'] ?? 'unknown';
           buffer.writeln('Launch $app');
           break;
+
+        // Vision Assist actions
+        case 'increase_text_size':
+          final size = action.parameters['to'] ?? 'large';
+          buffer.writeln('Increase text size to $size');
+          break;
+        case 'increase_contrast':
+        case 'enable_high_visibility':
+          buffer.writeln('Enable high contrast mode');
+          break;
+        case 'enable_screen_reader':
+          buffer.writeln('Enable screen reader (TalkBack)');
+          break;
+        case 'boost_brightness':
+          final level = action.parameters['to'] ?? 100;
+          buffer.writeln('Boost brightness to $level%');
+          break;
+
+        // Motor Assist actions
+        case 'reduce_gesture_sensitivity':
+          buffer.writeln('Reduce gesture sensitivity');
+          break;
+        case 'enable_voice_typing':
+          buffer.writeln('Enable voice typing');
+          break;
+        case 'enable_one_handed_mode':
+          buffer.writeln('Enable one-handed mode');
+          break;
+        case 'increase_touch_targets':
+          buffer.writeln('Increase touch target sizes');
+          break;
+
+        // Cognitive/Neurodivergent actions
+        case 'reduce_animation':
+          buffer.writeln('Reduce animation speed');
+          break;
+        case 'simplify_home_screen':
+          buffer.writeln('Simplify home screen layout');
+          break;
+        case 'mute_distraction_apps':
+          buffer.writeln('Mute distraction apps');
+          break;
+        case 'highlight_focus_apps':
+          buffer.writeln('Highlight focus apps');
+          break;
+
+        // Hearing Support actions
+        case 'enable_live_transcribe':
+          buffer.writeln('Enable Live Transcribe');
+          break;
+        case 'enable_captions':
+          buffer.writeln('Enable system-wide captions');
+          break;
+        case 'flash_screen_alerts':
+          buffer.writeln('Enable screen flash for alerts');
+          break;
+        case 'boost_haptic_feedback':
+          final strength = action.parameters['strength'] ?? 'strong';
+          buffer.writeln('Boost haptic feedback ($strength)');
+          break;
+
+        // Safety action
+        case 'launch_care_app':
+          final app = action.parameters['app'] ?? 'Emergency Contacts';
+          buffer.writeln('Launch $app');
+          break;
+
         default:
           buffer.writeln(action.type);
       }

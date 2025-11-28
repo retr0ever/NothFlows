@@ -57,6 +57,137 @@ class MainActivity: FlutterActivity() {
                         result.success(true)
                     }
                 }
+
+                // ============================================================
+                // ACCESSIBILITY NATIVE METHODS
+                // ============================================================
+
+                "setTextSize" -> {
+                    val size = call.argument<String>("size") ?: "medium"
+                    val scale = when(size) {
+                        "small" -> 0.85f
+                        "medium" -> 1.0f
+                        "large" -> 1.15f
+                        "max" -> 1.3f
+                        else -> 1.0f
+                    }
+                    try {
+                        Settings.System.putFloat(contentResolver, Settings.System.FONT_SCALE, scale)
+                        android.util.Log.d("NothFlows", "Set text size to $size (scale: $scale)")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to set text size", e)
+                        result.error("FAILED", "Cannot set text size", null)
+                    }
+                }
+
+                "setHighContrast" -> {
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            Settings.Secure.putInt(contentResolver,
+                                Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED, 1)
+                            android.util.Log.d("NothFlows", "Enabled high contrast mode")
+                            result.success(true)
+                        } else {
+                            result.error("UNSUPPORTED", "High contrast requires Android N+", null)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to set high contrast", e)
+                        result.error("FAILED", "Cannot set high contrast: ${e.message}", null)
+                    }
+                }
+
+                "setAnimationScale" -> {
+                    val scale = call.argument<Double>("scale")?.toFloat() ?: 1.0f
+                    try {
+                        Settings.Global.putFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, scale)
+                        Settings.Global.putFloat(contentResolver, Settings.Global.TRANSITION_ANIMATION_SCALE, scale)
+                        Settings.Global.putFloat(contentResolver, Settings.Global.WINDOW_ANIMATION_SCALE, scale)
+                        android.util.Log.d("NothFlows", "Set animation scale to $scale")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to set animation scale", e)
+                        result.error("FAILED", "Cannot set animation scale: ${e.message}", null)
+                    }
+                }
+
+                "enableVoiceTyping" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        android.util.Log.d("NothFlows", "Opened input method settings")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to open input settings", e)
+                        result.error("FAILED", "Cannot open input settings", null)
+                    }
+                }
+
+                "enableCaptions" -> {
+                    try {
+                        Settings.Secure.putInt(contentResolver,
+                            Settings.Secure.ACCESSIBILITY_CAPTIONING_ENABLED, 1)
+                        android.util.Log.d("NothFlows", "Enabled system captions")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to enable captions", e)
+                        result.error("FAILED", "Cannot enable captions: ${e.message}", null)
+                    }
+                }
+
+                "enableFlashAlerts" -> {
+                    try {
+                        // Camera flash for notifications (if supported)
+                        Settings.System.putInt(contentResolver, "flash_notification", 1)
+                        android.util.Log.d("NothFlows", "Enabled flash alerts")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to enable flash alerts", e)
+                        result.error("FAILED", "Cannot enable flash alerts: ${e.message}", null)
+                    }
+                }
+
+                "setHapticStrength" -> {
+                    val strength = call.argument<String>("strength") ?: "medium"
+                    val intensity = when(strength) {
+                        "light" -> 50
+                        "medium" -> 100
+                        "strong" -> 255
+                        else -> 100
+                    }
+                    try {
+                        Settings.System.putInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_INTENSITY, intensity)
+                        android.util.Log.d("NothFlows", "Set haptic strength to $strength (intensity: $intensity)")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Failed to set haptic strength", e)
+                        result.error("FAILED", "Cannot set haptic strength: ${e.message}", null)
+                    }
+                }
+
+                "enableOneHandedMode" -> {
+                    try {
+                        // One-handed mode settings (manufacturer-specific)
+                        val intent = Intent("android.settings.GESTURE_SETTINGS")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        android.util.Log.d("NothFlows", "Opened gesture settings for one-handed mode")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        // Fallback to general settings
+                        try {
+                            val intent = Intent(Settings.ACTION_SETTINGS)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e2: Exception) {
+                            android.util.Log.e("NothFlows", "Failed to open one-handed mode settings", e)
+                            result.error("FAILED", "Cannot enable one-handed mode", null)
+                        }
+                    }
+                }
+
                 else -> result.notImplemented()
             }
         }
