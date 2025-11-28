@@ -2,6 +2,8 @@
 
 Smart-modes micro-automation app for Nothing Phones, powered by on-device AI.
 
+![NothFlows logo](assets/branding/nothflows-logo.png)
+
 ## Overview
 
 NothFlows allows you to create intelligent automation flows using natural language. The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks—100% offline.
