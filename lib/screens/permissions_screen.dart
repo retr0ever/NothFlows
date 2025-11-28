@@ -114,6 +114,48 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     }
   }
 
+  Widget _buildPermissionExplanation({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          color: const Color(0xFF5B4DFF),
+          size: 20,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.6),
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final grantedCount = _permissionStatus.values.where((v) => v).length;
@@ -178,6 +220,42 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   error: _error,
                   onDismiss: () => setState(() => _error = null),
                 ),
+
+              const SizedBox(height: 16),
+
+              // Permission explanations
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPermissionExplanation(
+                      icon: Icons.folder,
+                      title: 'Storage',
+                      subtitle: 'Clean screenshots and downloads automatically',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPermissionExplanation(
+                      icon: Icons.settings,
+                      title: 'Modify System Settings',
+                      subtitle: 'Adjust brightness, volume, and other system settings',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPermissionExplanation(
+                      icon: Icons.sensors,
+                      title: 'Sensors',
+                      subtitle: 'Context awareness (light and motion) to trigger automations',
+                    ),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 16),
 

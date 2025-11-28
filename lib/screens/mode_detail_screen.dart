@@ -152,6 +152,30 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
     );
   }
 
+  String _buildConditionsText(FlowConditions conditions) {
+    final parts = <String>[];
+
+    if (conditions.ambientLight != null) {
+      parts.add('Light: ${conditions.ambientLight}');
+    }
+    if (conditions.noiseLevel != null) {
+      parts.add('Noise: ${conditions.noiseLevel}');
+    }
+    if (conditions.deviceMotion != null) {
+      parts.add('Motion: ${conditions.deviceMotion}');
+    }
+    if (conditions.timeOfDay != null) {
+      parts.add('Time: ${conditions.timeOfDay}');
+    }
+    if (conditions.batteryLevel != null) {
+      parts.add('Battery: ${conditions.batteryLevel}%');
+    }
+
+    return parts.isEmpty
+        ? 'No conditions'
+        : 'Triggers when ${parts.join(', ')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -325,6 +349,40 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
 
                   const SizedBox(height: 24),
 
+                  // Create from Screenshot button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        debugPrint('[ModeDetail] TODO: Implement screenshot-based flow creation');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Screenshot-based flow creation coming soon!'),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.image),
+                      label: const Text('Create from Screenshot'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodyMedium!
+                              .color!
+                              .withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
                   // Example flows
                   const Text(
                     'Examples',
@@ -392,18 +450,62 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                     ..._mode.flows.map((flow) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: FlowTile(
-                          flow: flow,
-                          onTap: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              isScrollControlled: true,
-                              builder: (context) =>
-                                  FlowPreviewSheet(flow: flow, isEditing: true),
-                            );
-                          },
-                          onDelete: () => _deleteFlow(flow.id!),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FlowTile(
+                              flow: flow,
+                              onTap: () async {
+                                await showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  isScrollControlled: true,
+                                  builder: (context) =>
+                                      FlowPreviewSheet(flow: flow, isEditing: true),
+                                );
+                              },
+                              onDelete: () => _deleteFlow(flow.id!),
+                            ),
+                            // Show conditions if present
+                            if (flow.conditions != null && !flow.conditions!.isEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white.withOpacity(0.05)
+                                      : Colors.black.withOpacity(0.03),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _mode.color.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.sensors,
+                                      size: 16,
+                                      color: _mode.color,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _buildConditionsText(flow.conditions!),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.color
+                                              ?.withOpacity(0.8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       );
                     }),

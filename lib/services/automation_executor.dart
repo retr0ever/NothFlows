@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/flow_dsl.dart';
+import 'sensor_service.dart';
 
 /// Result of executing a flow action
 class ExecutionResult {
@@ -37,6 +38,14 @@ class AutomationExecutor {
   /// Execute a complete flow
   Future<List<ExecutionResult>> executeFlow(FlowDSL flow) async {
     debugPrint('[Executor] Starting execution of flow: ${flow.trigger}');
+
+    // Check sensor conditions before executing
+    final conditionsMet = SensorService().evaluateConditions(flow.conditions);
+    if (!conditionsMet) {
+      debugPrint('[Automation] Conditions not met for flow ${flow.id ?? flow.trigger}');
+      // Return empty result list when conditions are not met
+      return [];
+    }
 
     final results = <ExecutionResult>[];
 

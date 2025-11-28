@@ -58,8 +58,28 @@ class ModeCard extends StatelessWidget {
                     size: 24,
                   ),
                 ),
+                const SizedBox(width: 8),
+
+                // Category badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: mode.color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    mode.category.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: mode.color,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+
                 const Spacer(),
-                
+
                 // Toggle Switch (Custom Nothing Style)
                 InkWell(
                   onTap: onToggle,

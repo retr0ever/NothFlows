@@ -6,6 +6,7 @@ import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../widgets/mode_card.dart';
 import 'mode_detail_screen.dart';
+import 'daily_checkin_screen.dart';
 
 /// Home screen showing all available modes
 class HomeScreen extends StatefulWidget {
@@ -326,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Smart modes for your Nothing Phone',
+                              'Your Assistive Automation Engine',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Theme.of(context)
@@ -372,16 +373,43 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
       ),
 
-      // Settings button
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showSettingsSheet(),
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white.withOpacity(0.1)
-            : Colors.black.withOpacity(0.05),
-        child: Icon(
-          Icons.settings,
-          color: Theme.of(context).iconTheme.color,
-        ),
+      // Daily Check-In and Settings buttons
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Daily Check-In button
+          FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DailyCheckInScreen(),
+                ),
+              );
+            },
+            backgroundColor: const Color(0xFF5B4DFF),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.favorite_border),
+            label: const Text(
+              'Daily Check-In',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            heroTag: 'daily_checkin',
+          ),
+          const SizedBox(height: 12),
+          // Settings button
+          FloatingActionButton(
+            onPressed: () => _showSettingsSheet(),
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.1)
+                : Colors.black.withOpacity(0.05),
+            child: Icon(
+              Icons.settings,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            heroTag: 'settings',
+          ),
+        ],
       ),
     );
   }
