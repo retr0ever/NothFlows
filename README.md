@@ -18,8 +18,9 @@ The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructi
 - **Three Core Modes**: Sleep, Focus, and Custom
 - **Natural Language Flows**: Add automations by describing what you want
 - **100% On-Device AI**: All inference happens locally using CactusLLM
-- **NothingOS Aesthetic**: Glassmorphic UI optimised for Nothing Phones
+- **NothingOS Aesthetic**: Dot-matrix typography, monochrome palette, and pixel-art UI
 - **Local Storage**: All data persists on-device
+- **Simulation Mode**: Run locally on macOS/Windows for development
 
 ## Project Structure
 
@@ -39,7 +40,7 @@ lib/
 │   ├── flow_preview_sheet.dart   # Flow preview bottom sheet
 │   └── results_sheet.dart         # Execution results display
 └── widgets/
-    ├── glass_panel.dart           # Glassmorphic container
+    ├── glass_panel.dart           # Custom container widget
     ├── mode_card.dart             # Mode display card
     └── flow_tile.dart             # Flow list item
 ```
@@ -98,14 +99,42 @@ final flow = await llmService.parseInstruction(
 );
 ```
 
-### System Prompt
+## Running the App
 
-The service uses a carefully crafted system prompt that enforces strict JSON output:
+### Option 1: Simulation Mode (macOS / Windows)
 
-- Forces the model to output only valid DSL JSON
-- Provides examples of correct format
-- Lists all valid action types and parameters
-- Returns empty actions array for unclear instructions
+If you want to test the UI and logic without an Android device or the heavy AI model, use simulation mode. This mocks the AI responses and executes dummy actions.
+
+1. **Dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+2. **Run**:
+   ```bash
+   flutter run -d macos
+   ```
+
+   *Note: Ensure the `cactus` dependency is commented out in `pubspec.yaml` to avoid linking errors on non-Android platforms if you don't have the native libraries installed.*
+
+### Option 2: Android (Real Device / Emulator)
+
+This runs the full app with the actual Qwen3 AI model on-device.
+
+1. **Dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+2. **Permissions**:
+   The app will request the following permissions on first run:
+   - `MANAGE_EXTERNAL_STORAGE`
+   - `WRITE_SETTINGS`
+
+3. **Run**:
+   ```bash
+   flutter run
+   ```
 
 ## Setup Instructions
 
@@ -134,16 +163,6 @@ The app requires the following Android permissions:
 
 These are declared in `android/app/src/main/AndroidManifest.xml`.
 
-### 4. Build and Run
-
-```bash
-# Debug build
-flutter run
-
-# Release build (recommended for performance)
-flutter build apk --release
-```
-
 ## Architecture Decisions
 
 ### 1. Local-First AI
@@ -160,13 +179,13 @@ Using a JSON DSL provides:
 - **Extensibility**: Easy to add new actions
 - **Debugging**: Human-readable format
 
-### 3. Glassmorphic UI
+### 3. Nothing OS Aesthetic
 
-The NothingOS-inspired design features:
-- **Glass panels** with backdrop blur
-- **Minimal colours** with accent highlights
-- **High contrast** for OLED displays
-- **Large touch targets** for usability
+The design strictly follows Nothing's design principles:
+- **Dot Matrix Font**: Uses NDot-inspired typography
+- **Monochrome**: Heavy use of black, white, and grey
+- **Red Accents**: Minimal but impactful use of Nothing Red (#D71921)
+- **Dotted Borders**: Technical/industrial look instead of glassmorphism
 
 ### 4. Service Layer Pattern
 
@@ -269,6 +288,10 @@ print(flow.getDescription());
 
 MIT
 
+<<<<<<< HEAD
 ---
+=======
+--
+>>>>>>> 7b32474 (android studio edits)
 
 Built with ❤️ for Nothing users by Team Lotus

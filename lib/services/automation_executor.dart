@@ -30,6 +30,9 @@ class AutomationExecutor {
   factory AutomationExecutor() => _instance;
   AutomationExecutor._internal();
 
+  // Flag to bypass actual execution on non-Android platforms
+  bool get _isSimulation => !Platform.isAndroid;
+
   /// Execute a complete flow
   Future<List<ExecutionResult>> executeFlow(FlowDSL flow) async {
     debugPrint('[Executor] Starting execution of flow: ${flow.trigger}');
@@ -52,6 +55,10 @@ class AutomationExecutor {
 
   /// Execute a single action
   Future<ExecutionResult> _executeAction(FlowAction action) async {
+    if (_isSimulation) {
+      return _simulateExecution(action);
+    }
+    
     try {
       switch (action.type) {
         case 'clean_screenshots':
@@ -97,6 +104,58 @@ class AutomationExecutor {
         success: false,
         message: e.toString(),
       );
+    }
+  }
+  
+  /// Simulate execution for desktop testing
+  Future<ExecutionResult> _simulateExecution(FlowAction action) async {
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulate work
+    
+    switch (action.type) {
+      case 'clean_screenshots':
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Deleted 5 screenshots (25MB)',
+          data: {'count': 5, 'size_mb': '25.00'},
+        );
+      
+      case 'clean_downloads':
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Deleted 2 files (150MB)',
+          data: {'count': 2, 'size_mb': '150.00'},
+        );
+        
+      case 'mute_apps':
+        final apps = action.parameters['apps'] as List? ?? [];
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Muted apps: $apps',
+        );
+        
+      case 'lower_brightness':
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Set brightness to ${action.parameters['to']}%',
+        );
+        
+      case 'launch_app':
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Launched ${action.parameters['app']}',
+        );
+        
+      default:
+        return ExecutionResult(
+          actionType: action.type,
+          success: true,
+          message: '[SIM] Executed ${action.type}',
+        );
     }
   }
 
@@ -386,6 +445,10 @@ class AutomationExecutor {
 
   /// Request all necessary permissions
   Future<Map<String, bool>> requestPermissions() async {
+    if (_isSimulation) {
+      return {'storage': true, 'settings': true};
+    }
+    
     final results = <String, bool>{};
 
     results['storage'] = await Permission.manageExternalStorage.request().isGranted;

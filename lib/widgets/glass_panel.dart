@@ -1,7 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../main.dart';
 
-/// Glassmorphic panel widget for NothingOS aesthetic
+/// Glassmorphic panel widget adjusted for NothingOS aesthetic
 class GlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -18,7 +19,7 @@ class GlassPanel extends StatelessWidget {
     this.padding,
     this.borderRadius = 24,
     this.color,
-    this.blur = 10,
+    this.blur = 0, // Reduced blur for Nothing aesthetic
     this.border,
     this.onTap,
     this.elevation = 0,
@@ -28,40 +29,36 @@ class GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Nothing style: Solid backgrounds or very subtle tints
     final baseColor = color ??
         (isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.03));
+            ? NothFlowsApp.nothingDarkGrey
+            : NothFlowsApp.nothingWhite);
 
-    Widget content = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: baseColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: border ??
-                Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
-                  width: 1,
+    Widget content = Container(
+      padding: padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(borderRadius),
+        // Nothing style: High contrast borders
+        border: border ??
+            Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.2)
+                  : Colors.black.withOpacity(0.1),
+              width: 1,
+            ),
+        boxShadow: elevation > 0
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: elevation,
+                  offset: Offset(0, elevation / 2),
                 ),
-            boxShadow: elevation > 0
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: elevation,
-                      offset: Offset(0, elevation / 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: child,
-        ),
+              ]
+            : null,
       ),
+      child: child,
     );
 
     if (onTap != null) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:cactus/cactus.dart';
 import 'package:flutter/foundation.dart';
 import '../models/flow_dsl.dart';
@@ -59,6 +60,13 @@ Example output:
   Future<void> initialise() async {
     if (_isInitialised || _isLoading) return;
 
+    // Simulation mode for non-Android platforms
+    if (!Platform.isAndroid) {
+      debugPrint('[CactusLLM] Non-Android platform detected. Starting in SIMULATION mode.');
+      _isInitialised = true;
+      return;
+    }
+
     _isLoading = true;
     try {
       debugPrint('[CactusLLM] Initialising Qwen3 0.6B model...');
@@ -77,14 +85,20 @@ Example output:
       debugPrint('[CactusLLM] Model loaded successfully');
     } catch (e) {
       debugPrint('[CactusLLM] Failed to initialise model: $e');
-      rethrow;
+      // Fallback to simulation if model fails to load
+      if (kDebugMode) {
+        debugPrint('[CactusLLM] Falling back to simulation mode due to error.');
+        _isInitialised = true;
+      } else {
+        rethrow;
+      }
     } finally {
       _isLoading = false;
     }
   }
 
   /// Check if model is ready
-  bool get isReady => _isInitialised && _llm != null;
+  bool get isReady => _isInitialised;
 
   /// Parse natural language instruction into FlowDSL
   Future<FlowDSL?> parseInstruction({
@@ -93,6 +107,11 @@ Example output:
   }) async {
     if (!isReady) {
       await initialise();
+    }
+
+    // Use simulation parser if no LLM instance (Desktop or fallback)
+    if (_llm == null) {
+      return _simulateParse(instruction, mode);
     }
 
     try {
@@ -148,6 +167,65 @@ Generate the DSL JSON:'''),
     }
   }
 
+  /// Simple keyword-based parser for simulation mode
+  Future<FlowDSL?> _simulateParse(String instruction, String mode) async {
+    debugPrint('[CactusLLM] Simulating parse for: $instruction');
+    await Future.delayed(const Duration(milliseconds: 800)); // Simulate latency
+
+    final lower = instruction.toLowerCase();
+    final actions = <Map<String, dynamic>>[];
+
+    // Heuristic matching for common actions
+    if (lower.contains('screenshot')) {
+      actions.add({'type': 'clean_screenshots', 'older_than_days': 30});
+    }
+    if (lower.contains('download')) {
+      actions.add({'type': 'clean_downloads', 'older_than_days': 30});
+    }
+    if (lower.contains('mute')) {
+      actions.add({'type': 'mute_apps', 'apps': ['Instagram', 'TikTok']});
+    }
+    if (lower.contains('brightness')) {
+      actions.add({'type': 'lower_brightness', 'to': 20});
+    }
+    if (lower.contains('volume')) {
+      actions.add({'type': 'set_volume', 'level': 30});
+    }
+    if (lower.contains('dnd') || lower.contains('disturb')) {
+      actions.add({'type': 'enable_dnd'});
+    }
+    if (lower.contains('wifi')) {
+      actions.add({'type': 'disable_wifi'});
+    }
+    if (lower.contains('bluetooth')) {
+      actions.add({'type': 'disable_bluetooth'});
+    }
+    if (lower.contains('wallpaper')) {
+      actions.add({'type': 'set_wallpaper', 'path': 'assets/wallpapers/minimal.jpg'});
+    }
+    if (lower.contains('launch') || lower.contains('open')) {
+      // Extract potential app name
+      final parts = lower.split(' ');
+      String app = 'App';
+      if (parts.length > 1) {
+        app = parts.last;
+      }
+      actions.add({'type': 'launch_app', 'app': app});
+    }
+
+    // Default to mock action if nothing matched
+    if (actions.isEmpty) {
+       actions.add({'type': 'clean_screenshots', 'older_than_days': 7});
+    }
+
+    final jsonMap = {
+      'trigger': 'mode.on:$mode',
+      'actions': actions,
+    };
+
+    return FlowDSL.fromJson(jsonMap);
+  }
+
   /// Batch parse multiple instructions
   Future<List<FlowDSL>> parseBatch({
     required List<String> instructions,
@@ -172,6 +250,15 @@ Generate the DSL JSON:'''),
   Future<Map<String, dynamic>> getModelInfo() async {
     if (!isReady) {
       return {'status': 'not_initialised'};
+    }
+
+    if (_llm == null) {
+      return {
+        'status': 'ready (simulated)',
+        'model_name': 'Simulation Mode',
+        'local_only': true,
+        'size': '0MB',
+      };
     }
 
     return {
@@ -201,7 +288,7 @@ Generate the DSL JSON:'''),
     if (_llm != null) {
       _llm!.unload();
       _llm = null;
-      _isInitialised = false;
     }
+    _isInitialised = false;
   }
 }

@@ -69,12 +69,6 @@ class NothFlowsApp extends StatelessWidget {
             letterSpacing: 0,
           ),
         ),
-        cardTheme: CardTheme(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
@@ -118,13 +112,6 @@ class NothFlowsApp extends StatelessWidget {
             fontWeight: FontWeight.w400,
             letterSpacing: 0,
             color: Colors.white,
-          ),
-        ),
-        cardTheme: CardTheme(
-          elevation: 0,
-          color: Colors.white.withOpacity(0.05),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(

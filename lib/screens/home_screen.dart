@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/mode_model.dart';
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<ModeModel> _modes = [];
   bool _isLoading = true;
+  final bool _isSimulation = !Platform.isAndroid;
 
   @override
   void initState() {
@@ -105,13 +107,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'NothFlows',
-                              style: TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -1.5,
-                              ),
+                            Row(
+                              children: [
+                                const Text(
+                                  'NothFlows',
+                                  style: TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -1.5,
+                                  ),
+                                ),
+                                if (_isSimulation) ...[
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.orange),
+                                    ),
+                                    child: const Text(
+                                      'SIMULATION',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 8),
                             Text(
