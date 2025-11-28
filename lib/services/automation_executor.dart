@@ -317,27 +317,13 @@ class AutomationExecutor {
     final level = (params['to'] as int? ?? 50).clamp(0, 100);
 
     try {
-      // First check if we have WRITE_SETTINGS permission
-      final canWrite = await platform.invokeMethod<bool>('canWriteSettings');
-
-      if (canWrite != true) {
-        // Request permission
-        await platform.invokeMethod('requestWriteSettings');
-
-        return ExecutionResult(
-          actionType: 'lower_brightness',
-          success: false,
-          message: 'WRITE_SETTINGS permission required. Please grant permission and try again.',
-        );
-      }
-
       // Use native Android API to set brightness
       final success = await platform.invokeMethod<bool>('setBrightness', {
         'brightness': level,
       });
 
       if (success == true) {
-        debugPrint('[Executor] Set screen brightness to $level% via native API');
+        debugPrint('[Executor] Set screen brightness to $level% via native API/fallback');
 
         return ExecutionResult(
           actionType: 'lower_brightness',
@@ -345,13 +331,14 @@ class AutomationExecutor {
           message: 'Set brightness to $level%',
           data: {'level': level},
         );
-      } else {
-        return ExecutionResult(
-          actionType: 'lower_brightness',
-          success: false,
-          message: 'Failed to set brightness (permission denied)',
-        );
       }
+
+      return ExecutionResult(
+        actionType: 'lower_brightness',
+        success: false,
+        message:
+            'Failed to change brightness. Try granting "Modify system settings" to NothFlows and retry.',
+      );
     } catch (e) {
       debugPrint('[Executor] Error setting brightness: $e');
       return ExecutionResult(
@@ -486,14 +473,27 @@ class AutomationExecutor {
   /// Request all necessary permissions
   Future<Map<String, bool>> requestPermissions() async {
     if (_isSimulation) {
-      return {'storage': true, 'settings': true};
+      return {'storage': true, 'settings': true, 'write_settings': true};
     }
     
     final results = <String, bool>{};
 
     results['storage'] = await Permission.manageExternalStorage.request().isGranted;
     results['settings'] = await Permission.systemAlertWindow.request().isGranted;
+    results['write_settings'] = await ensureWriteSettingsPermission();
 
     return results;
+  }
+
+  /// Ensure WRITE_SETTINGS permission is granted (opens settings if needed)
+  Future<bool> ensureWriteSettingsPermission() async {
+    if (_isSimulation) return true;
+
+    final canWrite = await platform.invokeMethod<bool>('canWriteSettings');
+    if (canWrite == true) return true;
+
+    await platform.invokeMethod('requestWriteSettings');
+    final recheck = await platform.invokeMethod<bool>('canWriteSettings');
+    return recheck == true;
   }
 }

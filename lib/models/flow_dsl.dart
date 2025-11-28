@@ -11,11 +11,13 @@ class FlowAction {
   });
 
   factory FlowAction.fromJson(Map<String, dynamic> json) {
+    final type = json['type'] as String;
+    final parameters = Map<String, dynamic>.from(json);
+    parameters.remove('type');
+
     return FlowAction(
-      type: json['type'] as String,
-      parameters: Map<String, dynamic>.from(
-        json..remove('type'),
-      ),
+      type: type,
+      parameters: parameters,
     );
   }
 

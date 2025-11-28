@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/mode_model.dart';
+import '../models/flow_dsl.dart';
 import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../widgets/mode_card.dart';
@@ -46,25 +46,210 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleMode(ModeModel mode) async {
     try {
+      final isActivating = !mode.isActive;
+      final flowsForEvent = _getFlowsForEvent(mode, isActivating: isActivating);
+
       // Toggle the mode
       await _storage.toggleMode(mode.id);
 
-      // If activating, execute all flows
-      if (!mode.isActive) {
-        for (final flow in mode.flows) {
-          await _executor.executeFlow(flow);
+      // If activating/deactivating, execute relevant flows for that event
+      if (flowsForEvent.isNotEmpty) {
+        final allResults = <ExecutionResult>[];
+
+        // Request any missing permissions before running
+        await _executor.requestPermissions();
+
+        for (final flow in flowsForEvent) {
+          final results = await _executor.executeFlow(flow);
+          allResults.addAll(results);
         }
 
-        _showSnackBar('${mode.name} mode activated');
+        if (mounted && allResults.isNotEmpty) {
+          _showExecutionResults(
+            mode,
+            allResults,
+            isActivating: isActivating,
+          );
+        }
       } else {
-        _showSnackBar('${mode.name} mode deactivated');
+        _showSnackBar(
+          'No flows set for turning ${isActivating ? "on" : "off"} ${mode.name}',
+        );
       }
+
+      _showSnackBar(
+        isActivating
+            ? '${mode.name} mode activated'
+            : '${mode.name} mode deactivated',
+      );
 
       // Reload modes to reflect changes
       await _loadModes();
     } catch (e) {
       _showSnackBar('Error toggling mode: $e');
     }
+  }
+
+  List<FlowDSL> _getFlowsForEvent(
+    ModeModel mode, {
+    required bool isActivating,
+  }) {
+    final expectedTrigger = 'mode.${isActivating ? "on" : "off"}:${mode.id}';
+    return mode.flows
+        .where((flow) => flow.trigger.toLowerCase() == expectedTrigger)
+        .toList();
+  }
+
+  void _showExecutionResults(
+    ModeModel mode,
+    List<ExecutionResult> results, {
+    required bool isActivating,
+  }) {
+    if (!mounted) return;
+
+    final successCount = results.where((r) => r.success).length;
+    final failureCount = results.length - successCount;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final sheetColor = Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white;
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      '${mode.name} ${isActivating ? "on" : "off"}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (failureCount > 0
+                                ? Colors.red
+                                : Colors.green)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$successCount/${results.length} actions',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: failureCount > 0 ? Colors.red : Colors.green,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_isSimulation)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Simulation mode: actions are logged but device changes are not applied.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.color
+                                  ?.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                SizedBox(
+                  height: (results.length * 68).clamp(180, 360).toDouble(),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: results.length,
+                    separatorBuilder: (_, __) => Divider(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color
+                          ?.withOpacity(0.08),
+                    ),
+                    itemBuilder: (context, index) {
+                      final result = results[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          result.success ? Icons.check_circle : Icons.error,
+                          color: result.success ? Colors.green : Colors.red,
+                        ),
+                        title: Text(
+                          result.actionType,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        subtitle: result.message != null
+                            ? Text(
+                                result.message!,
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color
+                                      ?.withOpacity(0.7),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _openModeDetail(ModeModel mode) {
