@@ -5,6 +5,7 @@ import '../services/cactus_llm_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/flow_tile.dart';
+import '../widgets/debug_banner.dart';
 import 'flow_preview_sheet.dart';
 
 /// Detail screen for managing flows in a mode
@@ -66,14 +67,23 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
     setState(() => _isProcessing = true);
 
     try {
+      debugPrint('[ModeDetail] Parsing instruction: $instruction');
+
       // Parse instruction using Cactus LLM
       final dsl = await _llmService.parseInstruction(
         instruction: instruction,
         mode: _mode.id,
       );
 
+      debugPrint('[ModeDetail] Parse result: ${dsl?.toJson()}');
+
       if (dsl == null) {
-        _showSnackBar('Could not parse instruction. Try rephrasing.');
+        final errorMsg = 'Could not parse instruction. Try rephrasing.\n\nInstruction: "$instruction"';
+        debugPrint('[ModeDetail] ERROR: $errorMsg');
+        _showSnackBar(errorMsg);
+        if (mounted) {
+          DebugSnackbar.showError(context, 'LLM parsing failed - check debug output');
+        }
         setState(() => _isProcessing = false);
         return;
       }
@@ -101,8 +111,16 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
           _showSnackBar('Flow added successfully');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[ModeDetail] ERROR adding flow: $e');
+      debugPrint('[ModeDetail] Stack trace: $stackTrace');
       _showSnackBar('Error adding flow: $e');
+      if (mounted) {
+        DebugSnackbar.showError(
+          context,
+          'Exception: ${e.toString()}\n\nCheck console for stack trace',
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
