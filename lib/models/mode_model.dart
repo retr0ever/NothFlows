@@ -180,49 +180,42 @@ class ModeModel {
     switch (id) {
       case 'vision':
         return [
-          'Increase text size to maximum',
-          'Increase contrast and enable high visibility',
-          'Boost brightness to 100%',
-          'Enable screen reader',
-          'Reduce animation speed',
+          'Set text size to large',
+          'Enable high contrast display',
+          'Boost screen brightness to maximum',
         ];
       case 'motor':
         return [
           'Reduce gesture sensitivity',
-          'Simplify home screen layout',
-          'Enable voice typing',
+          'Open voice typing settings',
           'Increase touch target sizes',
-          'Enable one-handed mode',
         ];
       case 'neurodivergent':
         return [
-          'Mute all distraction apps',
+          'Mute distraction apps',
           'Enable Do Not Disturb',
-          'Reduce animation and transitions',
-          'Highlight focus apps only',
-          'Set calm wallpaper',
+          'Reduce system animations',
+          'Simplify home screen',
         ];
       case 'calm':
         return [
           'Enable Do Not Disturb',
           'Lower brightness to 30%',
-          'Set volume to 10%',
-          'Reduce animation speed',
-          'Mute all notifications',
+          'Reduce volume to 10%',
+          'Slow down animations',
         ];
       case 'hearing':
         return [
-          'Enable live transcribe',
-          'Enable visual notification alerts',
-          'Boost haptic feedback',
-          'Enable captions everywhere',
-          'Flash screen for alerts',
+          'Enable system-wide captions',
+          'Flash screen for notifications',
+          'Boost haptic feedback to maximum',
+          'Launch Live Transcribe app',
         ];
       case 'custom':
         return [
-          'Build your own assistive routine',
-          'Combine multiple accessibility features',
-          'Create personalized workflows',
+          'Tap to configure your own flows',
+          'Combine any accessibility actions',
+          'Create personalised automations',
         ];
       default:
         return [];
