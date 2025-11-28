@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../models/flow_dsl.dart';
 
 /// Service for interacting with Cactus LLM for on-device inference
+/// Upgraded to multi-step accessibility planner
 class CactusLLMService {
   static final CactusLLMService _instance = CactusLLMService._internal();
   factory CactusLLMService() => _instance;
@@ -15,37 +16,66 @@ class CactusLLMService {
   bool _isInitialised = false;
   bool _isLoading = false;
 
-  /// System prompt that enforces DSL output format
-  static const String systemPrompt = '''Convert to JSON. Output ONLY the JSON, nothing else.
+  /// System prompt for accessibility automation planner
+  static const String systemPrompt = '''You are an accessibility automation planner for disabled users.
 
-Schema: {"trigger": "mode.on:MODE", "actions": [{"type": "TYPE", "param": value}]}
+Input: Natural language request + user disability context + sensor data
+Output: ONLY valid JSON DSL with multi-step accessibility flows
 
-Actions:
-- clean_screenshots: older_than_days
-- clean_downloads: older_than_days
-- mute_apps: apps
-- lower_brightness: to
-- set_volume: level
-- enable_dnd: (no params)
-- disable_wifi: (no params)
-- disable_bluetooth: (no params)
-- set_wallpaper: path
-- launch_app: app
+Schema:
+{
+  "trigger": "assistive_mode.on:MODE",
+  "conditions": {
+    "ambient_light": "low|medium|high",
+    "noise_level": "quiet|moderate|loud",
+    "device_motion": "still|walking|shaky",
+    "recent_usage": ["app1", "app2"],
+    "time_of_day": "morning|afternoon|evening|night"
+  },
+  "actions": [
+    {"type": "ACTION_TYPE", "param": value}
+  ]
+}
 
-Example: "lower brightness to 20"
-Output: {"trigger": "mode.on:custom", "actions": [{"type": "lower_brightness", "to": 20}]}
+Available Modes: vision, motor, neurodivergent, calm, hearing, custom, sleep, focus
 
-NO explanations. NO thinking. ONLY JSON.''';
+Available Actions:
+[Vision] increase_text_size, increase_contrast, enable_screen_reader, boost_brightness, reduce_animation
+[Motor] reduce_gesture_sensitivity, enable_voice_typing, enable_one_handed_mode, increase_touch_targets
+[Cognitive] reduce_animation, simplify_home_screen, mute_distraction_apps, highlight_focus_apps, enable_dnd
+[Hearing] enable_live_transcribe, enable_captions, flash_screen_alerts, boost_haptic_feedback
+[General] lower_brightness, set_volume, mute_apps, launch_app, clean_screenshots, clean_downloads, disable_wifi, disable_bluetooth
+
+Rules:
+1. Infer disability context from user request
+2. Generate 2-5 related actions (multi-step plans)
+3. Add conditions when sensory triggers are mentioned
+4. Combine complementary actions (e.g., high contrast + large text for vision)
+5. Output ONLY JSON, no explanations or thinking
+
+Examples:
+
+Input: "My eyes hurt, make everything easier to see"
+Output: {"trigger":"assistive_mode.on:vision","conditions":{"ambient_light":"high"},"actions":[{"type":"increase_text_size","to":"max"},{"type":"increase_contrast"},{"type":"reduce_animation"},{"type":"boost_brightness","to":80}]}
+
+Input: "I'm feeling anxious and overwhelmed"
+Output: {"trigger":"assistive_mode.on:calm","actions":[{"type":"enable_dnd"},{"type":"lower_brightness","to":30},{"type":"set_volume","level":10},{"type":"reduce_animation"},{"type":"mute_distraction_apps"}]}
+
+Input: "It's noisy and I can't hear notifications"
+Output: {"trigger":"assistive_mode.on:hearing","conditions":{"noise_level":"loud"},"actions":[{"type":"enable_live_transcribe"},{"type":"flash_screen_alerts"},{"type":"boost_haptic_feedback","strength":"strong"},{"type":"enable_captions"}]}
+
+NO explanations. NO thinking tags. ONLY JSON.''';
 
   /// Initialise the Qwen3 0.6B model
   Future<void> initialise() async {
     if (_isInitialised || _isLoading) return;
 
-    // Simulation mode for non-Android platforms
+    // Require Android - no simulation mode
     if (!Platform.isAndroid) {
-      debugPrint('[CactusLLM] Non-Android platform detected. Starting in SIMULATION mode.');
-      _isInitialised = true;
-      return;
+      throw UnsupportedError(
+        'NothFlows requires Android for on-device AI. '
+        'The Cactus LLM cannot run on this platform.',
+      );
     }
 
     _isLoading = true;
@@ -65,14 +95,9 @@ NO explanations. NO thinking. ONLY JSON.''';
       _isInitialised = true;
       debugPrint('[CactusLLM] Model loaded successfully');
     } catch (e) {
-      debugPrint('[CactusLLM] Failed to initialise model: $e');
-      // Fallback to simulation if model fails to load
-      if (kDebugMode) {
-        debugPrint('[CactusLLM] Falling back to simulation mode due to error.');
-        _isInitialised = true;
-      } else {
-        rethrow;
-      }
+      debugPrint('[CactusLLM] CRITICAL: Failed to initialise model: $e');
+      _isInitialised = false;
+      rethrow; // Don't fall back, fail hard
     } finally {
       _isLoading = false;
     }
@@ -81,158 +106,183 @@ NO explanations. NO thinking. ONLY JSON.''';
   /// Check if model is ready
   bool get isReady => _isInitialised;
 
-  /// Parse natural language instruction into FlowDSL
-  Future<FlowDSL?> parseInstruction({
-    required String instruction,
-    required String mode,
-  }) async {
-    // Always try to initialize if not ready
-    if (!isReady) {
-      try {
-        await initialise();
-      } catch (e) {
-        debugPrint('[CactusLLM] Initialization failed, using simulation mode: $e');
-      }
-    }
+  /// Check if model is currently loading
+  bool get isLoading => _isLoading;
 
-    // Use simulation parser if no LLM instance (Desktop or fallback)
+  /// Generate multi-step accessibility plan with context reasoning
+  Future<FlowDSL?> generatePlan({
+    required String userRequest,
+    String? userContext, // "I have low vision", "I have hand tremors"
+    Map<String, dynamic>? sensorData,
+    List<FlowDSL>? existingFlows,
+  }) async {
+    if (!isReady) await initialise();
+
     if (_llm == null) {
-      debugPrint('[CactusLLM] Using simulation mode (no LLM instance)');
-      return _simulateParse(instruction, mode);
+      throw Exception('Cactus LLM is required. Model not loaded.');
     }
 
     try {
-      debugPrint('[CactusLLM] Parsing instruction with real LLM: $instruction');
+      // Build context-aware prompt
+      final contextInfo = StringBuffer();
+      if (userContext != null) {
+        contextInfo.writeln('User context: $userContext');
+      }
+      if (sensorData != null && sensorData.isNotEmpty) {
+        contextInfo.writeln('Sensor data: ${jsonEncode(sensorData)}');
+      }
+      if (existingFlows != null && existingFlows.isNotEmpty) {
+        contextInfo.writeln('Existing flows: ${existingFlows.length}');
+      }
 
-      // Build the messages
       final messages = [
         ChatMessage(role: 'system', content: systemPrompt),
-        ChatMessage(role: 'user', content: '''Mode: $mode
-Instruction: $instruction
+        ChatMessage(
+          role: 'user',
+          content: '''${contextInfo.toString()}
+Request: $userRequest
 
-Generate the DSL JSON:'''),
+Generate accessibility automation JSON:''',
+        ),
       ];
 
-      // Run inference
+      debugPrint('[CactusLLM] Generating plan for: $userRequest');
       final result = await _llm!.generateCompletion(messages: messages);
 
       if (!result.success) {
-        debugPrint('[CactusLLM] Inference failed: ${result.response}');
-        return null;
+        throw Exception('LLM generation failed: ${result.response}');
       }
 
       debugPrint('[CactusLLM] Raw response: ${result.response}');
+      debugPrint('[CactusLLM] Tokens/sec: ${result.tokensPerSecond}');
 
-      // Extract and clean JSON from response
+      // Extract and clean JSON
       String jsonText = result.response.trim();
-
-      // First, remove think tags and their content
       jsonText = jsonText.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '');
-
-      // Remove trailing tokens like <|im_end|>
       jsonText = jsonText.replaceAll(RegExp(r'<\|.*?\|>'), '');
-
-      // Trim again after removing tags
       jsonText = jsonText.trim();
 
-      // Find JSON boundaries - look for the outermost braces
       final startIdx = jsonText.indexOf('{');
       final endIdx = jsonText.lastIndexOf('}');
 
       if (startIdx == -1 || endIdx == -1) {
-        debugPrint('[CactusLLM] No valid JSON found in response');
-        return null;
+        throw Exception('No valid JSON found in response');
       }
 
       jsonText = jsonText.substring(startIdx, endIdx + 1);
-
-      // Sanitize JSON - fix common LLM mistakes
       jsonText = _sanitizeJson(jsonText);
+
       debugPrint('[CactusLLM] Sanitized JSON: $jsonText');
 
-      // Parse the DSL
       final dsl = FlowDSL.fromJsonString(jsonText);
 
-      // Validate
       if (!dsl.isValid()) {
-        debugPrint('[CactusLLM] Generated invalid DSL');
-        return null;
+        throw Exception('Generated invalid DSL');
       }
 
-      debugPrint('[CactusLLM] Successfully parsed DSL: ${dsl.trigger}');
+      debugPrint('[CactusLLM] Generated plan: ${dsl.trigger} with ${dsl.actions.length} actions');
       return dsl;
     } catch (e) {
-      debugPrint('[CactusLLM] Error parsing with LLM: $e, falling back to simulation');
-      // Fall back to simulation mode if LLM parsing fails
-      return _simulateParse(instruction, mode);
+      debugPrint('[CactusLLM] Error generating plan: $e');
+      throw Exception('Failed to generate accessibility plan: $e');
     }
   }
 
-  /// Simple keyword-based parser for simulation mode
-  Future<FlowDSL?> _simulateParse(String instruction, String mode) async {
-    debugPrint('[CactusLLM] Simulating parse for: $instruction');
-    await Future.delayed(const Duration(milliseconds: 300)); // Simulate latency
+  /// Infer disability category from user request
+  String inferDisabilityContext(String request) {
+    final lower = request.toLowerCase();
 
-    final lower = instruction.toLowerCase();
-    final actions = <Map<String, dynamic>>[];
+    if (lower.contains('see') ||
+        lower.contains('eyes') ||
+        lower.contains('vision') ||
+        lower.contains('read') ||
+        lower.contains('bright') ||
+        lower.contains('blind') ||
+        lower.contains('blurry')) {
+      return 'vision';
+    }
+    if (lower.contains('hear') ||
+        lower.contains('sound') ||
+        lower.contains('loud') ||
+        lower.contains('notification') ||
+        lower.contains('deaf') ||
+        lower.contains('noise')) {
+      return 'hearing';
+    }
+    if (lower.contains('tap') ||
+        lower.contains('hand') ||
+        lower.contains('finger') ||
+        lower.contains('gesture') ||
+        lower.contains('tremor') ||
+        lower.contains('shake') ||
+        lower.contains('motor')) {
+      return 'motor';
+    }
+    if (lower.contains('anxiety') ||
+        lower.contains('overwhelm') ||
+        lower.contains('calm') ||
+        lower.contains('stress') ||
+        lower.contains('distract') ||
+        lower.contains('panic')) {
+      return 'calm';
+    }
+    if (lower.contains('focus') ||
+        lower.contains('adhd') ||
+        lower.contains('autism') ||
+        lower.contains('concentrate') ||
+        lower.contains('attention')) {
+      return 'neurodivergent';
+    }
+    if (lower.contains('sleep') ||
+        lower.contains('night') ||
+        lower.contains('bed') ||
+        lower.contains('rest')) {
+      return 'sleep';
+    }
 
-    // Extract numbers from instruction
-    final numberMatch = RegExp(r'(\d+)').firstMatch(instruction);
-    final extractedNumber = numberMatch != null ? int.parse(numberMatch.group(1)!) : null;
+    return 'custom';
+  }
 
-    // Heuristic matching for common actions
-    if (lower.contains('screenshot')) {
-      final days = extractedNumber ?? 30;
-      actions.add({'type': 'clean_screenshots', 'older_than_days': days});
-    }
-    if (lower.contains('download')) {
-      final days = extractedNumber ?? 30;
-      actions.add({'type': 'clean_downloads', 'older_than_days': days});
-    }
-    if (lower.contains('mute')) {
-      actions.add({'type': 'mute_apps', 'apps': ['Instagram', 'TikTok']});
-    }
-    if (lower.contains('brightness')) {
-      final level = extractedNumber ?? 20;
-      actions.add({'type': 'lower_brightness', 'to': level});
-    }
-    if (lower.contains('volume')) {
-      final level = extractedNumber ?? 30;
-      actions.add({'type': 'set_volume', 'level': level});
-    }
-    if (lower.contains('dnd') || lower.contains('disturb')) {
-      actions.add({'type': 'enable_dnd'});
-    }
-    if (lower.contains('wifi')) {
-      actions.add({'type': 'disable_wifi'});
-    }
-    if (lower.contains('bluetooth')) {
-      actions.add({'type': 'disable_bluetooth'});
-    }
-    if (lower.contains('wallpaper')) {
-      actions.add({'type': 'set_wallpaper', 'path': 'assets/wallpapers/minimal.jpg'});
-    }
-    if (lower.contains('launch') || lower.contains('open')) {
-      // Extract potential app name
-      final parts = lower.split(' ');
-      String app = 'App';
-      if (parts.length > 1) {
-        app = parts.last;
+  /// Parse natural language instruction into FlowDSL
+  /// Now uses generatePlan internally for multi-step planning
+  Future<FlowDSL?> parseInstruction({
+    required String instruction,
+    required String mode,
+  }) async {
+    // Infer context from instruction
+    final inferredContext = inferDisabilityContext(instruction);
+
+    // Use generatePlan method for multi-step planning
+    return await generatePlan(
+      userRequest: instruction,
+      userContext: 'Mode: $mode, Inferred: $inferredContext',
+    );
+  }
+
+  /// Merge multiple flows intelligently (deduplicate, combine)
+  FlowDSL? mergeFlows(List<FlowDSL> flows) {
+    if (flows.isEmpty) return null;
+    if (flows.length == 1) return flows.first;
+
+    // Combine all actions, removing duplicates
+    final allActions = <FlowAction>[];
+    final seenTypes = <String>{};
+
+    for (final flow in flows) {
+      for (final action in flow.actions) {
+        if (!seenTypes.contains(action.type)) {
+          allActions.add(action);
+          seenTypes.add(action.type);
+        }
       }
-      actions.add({'type': 'launch_app', 'app': app});
     }
 
-    // Default to mock action if nothing matched
-    if (actions.isEmpty) {
-       actions.add({'type': 'clean_screenshots', 'older_than_days': 7});
-    }
-
-    final jsonMap = {
-      'trigger': 'mode.on:$mode',
-      'actions': actions,
-    };
-
-    return FlowDSL.fromJson(jsonMap);
+    // Use first flow's trigger and conditions
+    return FlowDSL(
+      trigger: flows.first.trigger,
+      conditions: flows.first.conditions,
+      actions: allActions,
+    );
   }
 
   /// Batch parse multiple instructions
@@ -243,12 +293,16 @@ Generate the DSL JSON:'''),
     final results = <FlowDSL>[];
 
     for (final instruction in instructions) {
-      final dsl = await parseInstruction(
-        instruction: instruction,
-        mode: mode,
-      );
-      if (dsl != null) {
-        results.add(dsl);
+      try {
+        final dsl = await parseInstruction(
+          instruction: instruction,
+          mode: mode,
+        );
+        if (dsl != null) {
+          results.add(dsl);
+        }
+      } catch (e) {
+        debugPrint('[CactusLLM] Error parsing instruction "$instruction": $e');
       }
     }
 
@@ -262,12 +316,7 @@ Generate the DSL JSON:'''),
     }
 
     if (_llm == null) {
-      return {
-        'status': 'ready (simulated)',
-        'model_name': 'Simulation Mode',
-        'local_only': true,
-        'size': '0MB',
-      };
+      return {'status': 'error', 'message': 'Model not loaded'};
     }
 
     return {
@@ -275,6 +324,8 @@ Generate the DSL JSON:'''),
       'model_name': 'qwen3-0.6',
       'local_only': true,
       'size': '~400MB',
+      'supports_accessibility': true,
+      'multi_step_planning': true,
     };
   }
 
@@ -285,24 +336,26 @@ Generate the DSL JSON:'''),
     }
 
     debugPrint('[CactusLLM] Warming up model...');
-    await parseInstruction(
-      instruction: 'Clean screenshots',
-      mode: 'custom',
-    );
-    debugPrint('[CactusLLM] Warm-up complete');
+    try {
+      await generatePlan(
+        userRequest: 'test accessibility setup',
+        userContext: 'warmup',
+      );
+      debugPrint('[CactusLLM] Warm-up complete');
+    } catch (e) {
+      debugPrint('[CactusLLM] Warm-up failed (non-critical): $e');
+    }
   }
 
   /// Sanitize JSON output from LLM to fix common formatting issues
   String _sanitizeJson(String json) {
-    // Fix incorrectly escaped quotes (e.g., "@param\" -> "param")
+    // Fix incorrectly escaped quotes
     json = json.replaceAll(RegExp(r'@([a-zA-Z_][a-zA-Z0-9_]*)\\"'), r'$1"');
 
     // Fix common hallucinations where LLM uses "param" instead of proper parameter names
-    // For lower_brightness, the parameter should be "to", not "param"
     json = json.replaceAll(RegExp(r'"param"\s*:\s*\[\s*(\d+)\s*\]'), r'"to": $1');
 
-    // Fix unquoted property names (e.g., to: 50 -> "to": 50)
-    // Only match at start of line or after comma/brace, to avoid matching colons in string values
+    // Fix unquoted property names
     json = json.replaceAllMapped(
       RegExp(r'([\[{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*', multiLine: true),
       (match) => '${match.group(1)}"${match.group(2)}": ',
@@ -314,7 +367,7 @@ Generate the DSL JSON:'''),
     // Remove any trailing commas before closing braces/brackets
     json = json.replaceAll(RegExp(r',\s*([}\]])'), r'$1');
 
-    // Remove any comments (// or /* */)
+    // Remove any comments
     json = json.replaceAll(RegExp(r'//.*?$', multiLine: true), '');
     json = json.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
 
@@ -328,5 +381,6 @@ Generate the DSL JSON:'''),
       _llm = null;
     }
     _isInitialised = false;
+    debugPrint('[CactusLLM] Resources disposed');
   }
 }

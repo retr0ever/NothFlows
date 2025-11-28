@@ -25,6 +25,7 @@ class ExecutionResult {
 }
 
 /// Service for executing automation actions
+/// Requires Android - simulation mode has been removed
 class AutomationExecutor {
   static final AutomationExecutor _instance = AutomationExecutor._internal();
   factory AutomationExecutor() => _instance;
@@ -32,9 +33,6 @@ class AutomationExecutor {
 
   // MethodChannel for native Android system control
   static const platform = MethodChannel('com.nothflows/system');
-
-  // Flag to bypass actual execution on non-Android platforms
-  bool get _isSimulation => !Platform.isAndroid;
 
   /// Execute a complete flow
   Future<List<ExecutionResult>> executeFlow(FlowDSL flow) async {
@@ -57,11 +55,17 @@ class AutomationExecutor {
   }
 
   /// Execute a single action
+  /// Requires Android - throws on other platforms
   Future<ExecutionResult> _executeAction(FlowAction action) async {
-    if (_isSimulation) {
-      return _simulateExecution(action);
+    // Require Android - no simulation mode
+    if (!Platform.isAndroid) {
+      return ExecutionResult(
+        actionType: action.type,
+        success: false,
+        message: 'NothFlows requires Android. Automation cannot run on this platform.',
+      );
     }
-    
+
     try {
       switch (action.type) {
         case 'clean_screenshots':
@@ -167,58 +171,6 @@ class AutomationExecutor {
     }
   }
   
-  /// Simulate execution for desktop testing
-  Future<ExecutionResult> _simulateExecution(FlowAction action) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate work
-    
-    switch (action.type) {
-      case 'clean_screenshots':
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Deleted 5 screenshots (25MB)',
-          data: {'count': 5, 'size_mb': '25.00'},
-        );
-      
-      case 'clean_downloads':
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Deleted 2 files (150MB)',
-          data: {'count': 2, 'size_mb': '150.00'},
-        );
-        
-      case 'mute_apps':
-        final apps = action.parameters['apps'] as List? ?? [];
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Muted apps: $apps',
-        );
-        
-      case 'lower_brightness':
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Set brightness to ${action.parameters['to']}%',
-        );
-        
-      case 'launch_app':
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Launched ${action.parameters['app']}',
-        );
-        
-      default:
-        return ExecutionResult(
-          actionType: action.type,
-          success: true,
-          message: '[SIM] Executed ${action.type}',
-        );
-    }
-  }
-
   /// Clean screenshots older than specified days
   Future<ExecutionResult> _cleanScreenshots(Map<String, dynamic> params) async {
     final days = params['older_than_days'] as int? ?? 30;
@@ -918,11 +870,13 @@ class AutomationExecutor {
   }
 
   /// Request all necessary permissions
+  /// Requires Android
   Future<Map<String, bool>> requestPermissions() async {
-    if (_isSimulation) {
-      return {'storage': true, 'settings': true, 'write_settings': true};
+    if (!Platform.isAndroid) {
+      debugPrint('[Executor] Cannot request permissions on non-Android platform');
+      return {'storage': false, 'settings': false, 'write_settings': false};
     }
-    
+
     final results = <String, bool>{};
 
     results['storage'] = await Permission.manageExternalStorage.request().isGranted;
@@ -933,8 +887,9 @@ class AutomationExecutor {
   }
 
   /// Ensure WRITE_SETTINGS permission is granted (opens settings if needed)
+  /// Requires Android
   Future<bool> ensureWriteSettingsPermission() async {
-    if (_isSimulation) return true;
+    if (!Platform.isAndroid) return false;
 
     final canWrite = await platform.invokeMethod<bool>('canWriteSettings');
     if (canWrite == true) return true;
