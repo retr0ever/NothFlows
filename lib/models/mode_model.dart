@@ -34,6 +34,23 @@ class ModeModel {
         icon: Icons.visibility,
         color: const Color(0xFF4D9FFF),
         category: 'vision',
+        flows: [
+          FlowDSL(
+            trigger: 'mode.on:vision',
+            actions: [
+              FlowAction(type: 'increase_text_size', parameters: {'to': 'large'}),
+              FlowAction(type: 'increase_contrast', parameters: {}),
+              FlowAction(type: 'boost_brightness', parameters: {'to': 100}),
+            ],
+          ),
+          FlowDSL(
+            trigger: 'mode.off:vision',
+            actions: [
+              FlowAction(type: 'increase_text_size', parameters: {'to': 'medium'}),
+              FlowAction(type: 'set_volume', parameters: {'level': 50}),
+            ],
+          ),
+        ],
       );
 
   static ModeModel get motorAssist => ModeModel(
@@ -43,6 +60,22 @@ class ModeModel {
         icon: Icons.touch_app,
         color: const Color(0xFF9F4DFF),
         category: 'motor',
+        flows: [
+          FlowDSL(
+            trigger: 'mode.on:motor',
+            actions: [
+              FlowAction(type: 'reduce_gesture_sensitivity', parameters: {}),
+              FlowAction(type: 'enable_voice_typing', parameters: {}),
+              FlowAction(type: 'increase_touch_targets', parameters: {}),
+            ],
+          ),
+          FlowDSL(
+            trigger: 'mode.off:motor',
+            actions: [
+              FlowAction(type: 'increase_text_size', parameters: {'to': 'medium'}),
+            ],
+          ),
+        ],
       );
 
   static ModeModel get neurodivergentFocus => ModeModel(
@@ -52,6 +85,23 @@ class ModeModel {
         icon: Icons.psychology,
         color: const Color(0xFFFF4D9F),
         category: 'cognitive',
+        flows: [
+          FlowDSL(
+            trigger: 'mode.on:neurodivergent',
+            actions: [
+              FlowAction(type: 'reduce_animation', parameters: {}),
+              FlowAction(type: 'mute_distraction_apps', parameters: {}),
+              FlowAction(type: 'enable_dnd', parameters: {}),
+              FlowAction(type: 'simplify_home_screen', parameters: {}),
+            ],
+          ),
+          FlowDSL(
+            trigger: 'mode.off:neurodivergent',
+            actions: [
+              FlowAction(type: 'set_volume', parameters: {'level': 50}),
+            ],
+          ),
+        ],
       );
 
   static ModeModel get calmMode => ModeModel(
@@ -61,6 +111,24 @@ class ModeModel {
         icon: Icons.self_improvement,
         color: const Color(0xFF4DFFB8),
         category: 'sensory',
+        flows: [
+          FlowDSL(
+            trigger: 'mode.on:calm',
+            actions: [
+              FlowAction(type: 'enable_dnd', parameters: {}),
+              FlowAction(type: 'lower_brightness', parameters: {'to': 30}),
+              FlowAction(type: 'set_volume', parameters: {'level': 10}),
+              FlowAction(type: 'reduce_animation', parameters: {}),
+            ],
+          ),
+          FlowDSL(
+            trigger: 'mode.off:calm',
+            actions: [
+              FlowAction(type: 'set_volume', parameters: {'level': 50}),
+              FlowAction(type: 'set_brightness', parameters: {'to': 50}),
+            ],
+          ),
+        ],
       );
 
   static ModeModel get hearingSupport => ModeModel(
@@ -70,6 +138,23 @@ class ModeModel {
         icon: Icons.hearing,
         color: const Color(0xFFFFB84D),
         category: 'sensory',
+        flows: [
+          FlowDSL(
+            trigger: 'mode.on:hearing',
+            actions: [
+              FlowAction(type: 'enable_captions', parameters: {}),
+              FlowAction(type: 'flash_screen_alerts', parameters: {}),
+              FlowAction(type: 'boost_haptic_feedback', parameters: {'strength': 'strong'}),
+              FlowAction(type: 'enable_live_transcribe', parameters: {}),
+            ],
+          ),
+          FlowDSL(
+            trigger: 'mode.off:hearing',
+            actions: [
+              FlowAction(type: 'boost_haptic_feedback', parameters: {'strength': 'medium'}),
+            ],
+          ),
+        ],
       );
 
   static ModeModel get customAssistive => ModeModel(

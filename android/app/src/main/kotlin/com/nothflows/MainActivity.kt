@@ -127,7 +127,7 @@ class MainActivity: FlutterActivity() {
                 "enableCaptions" -> {
                     try {
                         Settings.Secure.putInt(contentResolver,
-                            Settings.Secure.ACCESSIBILITY_CAPTIONING_ENABLED, 1)
+                            "accessibility_captioning_enabled", 1)
                         android.util.Log.d("NothFlows", "Enabled system captions")
                         result.success(true)
                     } catch (e: Exception) {
@@ -157,7 +157,7 @@ class MainActivity: FlutterActivity() {
                         else -> 100
                     }
                     try {
-                        Settings.System.putInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_INTENSITY, intensity)
+                        Settings.System.putInt(contentResolver, "haptic_feedback_intensity", intensity)
                         android.util.Log.d("NothFlows", "Set haptic strength to $strength (intensity: $intensity)")
                         result.success(true)
                     } catch (e: Exception) {
