@@ -252,11 +252,98 @@ Generate accessibility automation JSON:''',
     // Infer context from instruction
     final inferredContext = inferDisabilityContext(instruction);
 
-    // Use generatePlan method for multi-step planning
-    return await generatePlan(
-      userRequest: instruction,
-      userContext: 'Mode: $mode, Inferred: $inferredContext',
-    );
+    try {
+      // Use generatePlan method for multi-step planning
+      return await generatePlan(
+        userRequest: instruction,
+        userContext: 'Mode: $mode, Inferred: $inferredContext',
+      );
+    } catch (e) {
+      debugPrint('[CactusLLM] Error generating plan with real LLM: $e');
+
+      // In debug builds, fall back to a lightweight simulation so the app
+      // remains usable even if the Qwen model cannot be downloaded.
+      if (kDebugMode) {
+        debugPrint('[CactusLLM] Falling back to simulation mode (debug only)');
+        return _simulateParse(instruction, mode);
+      }
+
+      // In release builds, propagate the error – Cactus is required.
+      rethrow;
+    }
+  }
+
+  /// Simple keyword-based parser for simulation mode (debug-only fallback)
+  Future<FlowDSL?> _simulateParse(String instruction, String mode) async {
+    debugPrint('[CactusLLM] Simulating parse for: $instruction');
+
+    // Small artificial delay to mimic real inference latency
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final lower = instruction.toLowerCase();
+    final actions = <Map<String, dynamic>>[];
+
+    // Extract first integer from the instruction, if any
+    final numberMatch = RegExp(r'(\\d+)').firstMatch(instruction);
+    final extractedNumber =
+        numberMatch != null ? int.parse(numberMatch.group(1)!) : null;
+
+    // Heuristic matching for common actions
+    if (lower.contains('screenshot')) {
+      final days = extractedNumber ?? 30;
+      actions.add({'type': 'clean_screenshots', 'older_than_days': days});
+    }
+    if (lower.contains('download')) {
+      final days = extractedNumber ?? 30;
+      actions.add({'type': 'clean_downloads', 'older_than_days': days});
+    }
+    if (lower.contains('mute')) {
+      actions.add({'type': 'mute_apps', 'apps': ['Instagram', 'TikTok']});
+    }
+    if (lower.contains('brightness')) {
+      final level = extractedNumber ?? 20;
+      actions.add({'type': 'lower_brightness', 'to': level});
+    }
+    if (lower.contains('volume')) {
+      final level = extractedNumber ?? 30;
+      actions.add({'type': 'set_volume', 'level': level});
+    }
+    if (lower.contains('dnd') || lower.contains('disturb')) {
+      actions.add({'type': 'enable_dnd'});
+    }
+    if (lower.contains('wifi')) {
+      actions.add({'type': 'disable_wifi'});
+    }
+    if (lower.contains('bluetooth')) {
+      actions.add({'type': 'disable_bluetooth'});
+    }
+    if (lower.contains('wallpaper')) {
+      actions.add(
+        {'type': 'set_wallpaper', 'path': 'assets/wallpapers/minimal.jpg'},
+      );
+    }
+    if (lower.contains('launch') || lower.contains('open')) {
+      // Very simple heuristic to guess an app name
+      final parts = instruction.trim().split(RegExp(r'\\s+'));
+      var app = 'App';
+      if (parts.length > 1) {
+        app = parts.last;
+      }
+      actions.add({'type': 'launch_app', 'app': app});
+    }
+
+    // Default to a basic clean-up action if nothing matched
+    if (actions.isEmpty) {
+      actions.add({'type': 'clean_screenshots', 'older_than_days': 7});
+    }
+
+    final jsonMap = {
+      // Use assistive_mode trigger so it stays compatible with the new DSL
+      'trigger': 'assistive_mode.on:$mode',
+      'actions': actions,
+    };
+
+    return FlowDSL.fromJson(jsonMap);
   }
 
   /// Merge multiple flows intelligently (deduplicate, combine)

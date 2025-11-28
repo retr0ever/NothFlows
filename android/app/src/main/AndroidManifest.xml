@@ -16,6 +16,10 @@
     <!-- System settings -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- For demo builds only: needed to toggle secure accessibility settings like animations/contrast -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Network state -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />

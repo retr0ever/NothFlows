@@ -84,9 +84,36 @@ class MainActivity: FlutterActivity() {
                 "setHighContrast" -> {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            Settings.Secure.putInt(contentResolver,
-                                Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED, 1)
-                            android.util.Log.d("NothFlows", "Enabled high contrast mode")
+                            // Prefer high-contrast text where available
+                            try {
+                                Settings.Secure.putInt(
+                                    contentResolver,
+                                    "high_text_contrast_enabled",
+                                    1,
+                                )
+                                android.util.Log.d("NothFlows", "Enabled high text contrast")
+                            } catch (inner: Exception) {
+                                android.util.Log.w(
+                                    "NothFlows",
+                                    "High text contrast setting not available, falling back to inversion: $inner",
+                                )
+                            }
+
+                            // Fallback: enable display inversion as a visible contrast aid
+                            try {
+                                Settings.Secure.putInt(
+                                    contentResolver,
+                                    Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED,
+                                    1,
+                                )
+                                android.util.Log.d("NothFlows", "Enabled display inversion for contrast")
+                            } catch (inner: Exception) {
+                                android.util.Log.w(
+                                    "NothFlows",
+                                    "Failed to toggle display inversion: $inner",
+                                )
+                            }
+
                             result.success(true)
                         } else {
                             result.error("UNSUPPORTED", "High contrast requires Android N+", null)
@@ -113,11 +140,32 @@ class MainActivity: FlutterActivity() {
 
                 "enableVoiceTyping" -> {
                     try {
-                        val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
-                        android.util.Log.d("NothFlows", "Opened input method settings")
-                        result.success(true)
+                        // Try dedicated voice input settings first, then fall back
+                        val intents = listOf(
+                            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+                            Intent("com.google.android.settings.VOICE_INPUT"),
+                            Intent(Settings.ACTION_INPUT_METHOD_SETTINGS),
+                        )
+
+                        var launched = false
+                        for (intent in intents) {
+                            try {
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                launched = true
+                                android.util.Log.d("NothFlows", "Opened voice typing settings via ${intent.action}")
+                                break
+                            } catch (ignored: Exception) {
+                                // Try next intent
+                            }
+                        }
+
+                        if (launched) {
+                            result.success(true)
+                        } else {
+                            android.util.Log.e("NothFlows", "No available intent for voice typing settings")
+                            result.error("FAILED", "Voice typing settings not available on this device", null)
+                        }
                     } catch (e: Exception) {
                         android.util.Log.e("NothFlows", "Failed to open input settings", e)
                         result.error("FAILED", "Cannot open input settings", null)
@@ -126,10 +174,47 @@ class MainActivity: FlutterActivity() {
 
                 "enableCaptions" -> {
                     try {
-                        Settings.Secure.putInt(contentResolver,
-                            "accessibility_captioning_enabled", 1)
-                        android.util.Log.d("NothFlows", "Enabled system captions")
-                        result.success(true)
+                        // First try to toggle system captioning directly (requires WRITE_SECURE_SETTINGS)
+                        var succeeded = false
+                        try {
+                            Settings.Secure.putInt(
+                                contentResolver,
+                                "accessibility_captioning_enabled",
+                                1,
+                            )
+                            android.util.Log.d("NothFlows", "Enabled system captions via secure setting")
+                            succeeded = true
+                        } catch (inner: Exception) {
+                            android.util.Log.w(
+                                "NothFlows",
+                                "Direct caption toggle failed (likely missing WRITE_SECURE_SETTINGS): $inner",
+                            )
+                        }
+
+                        if (!succeeded) {
+                            // Fallback: open system caption settings so the user can enable manually
+                            try {
+                                val intent = Intent(Settings.ACTION_CAPTIONING_SETTINGS)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                android.util.Log.d("NothFlows", "Opened captioning settings UI")
+                                result.success(true)
+                                return@setMethodCallHandler
+                            } catch (inner: Exception) {
+                                android.util.Log.w(
+                                    "NothFlows",
+                                    "Caption settings intent failed, falling back to accessibility settings: $inner",
+                                )
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                android.util.Log.d("NothFlows", "Opened general accessibility settings UI")
+                                result.success(true)
+                                return@setMethodCallHandler
+                            }
+                        } else {
+                            result.success(true)
+                        }
                     } catch (e: Exception) {
                         android.util.Log.e("NothFlows", "Failed to enable captions", e)
                         result.error("FAILED", "Cannot enable captions: ${e.message}", null)
@@ -138,10 +223,42 @@ class MainActivity: FlutterActivity() {
 
                 "enableFlashAlerts" -> {
                     try {
-                        // Camera flash for notifications (if supported)
-                        Settings.System.putInt(contentResolver, "flash_notification", 1)
-                        android.util.Log.d("NothFlows", "Enabled flash alerts")
-                        result.success(true)
+                        var succeeded = false
+
+                        // Try device-specific global setting if available
+                        try {
+                            Settings.System.putInt(contentResolver, "flash_notification", 1)
+                            android.util.Log.d("NothFlows", "Enabled flash alerts via system setting")
+                            succeeded = true
+                        } catch (inner: Exception) {
+                            android.util.Log.w(
+                                "NothFlows",
+                                "Direct flash alert toggle failed (likely OEM/permission): $inner",
+                            )
+                        }
+
+                        if (!succeeded) {
+                            // Fallback: open notification / accessibility settings where flash alerts usually live
+                            try {
+                                val intent = Intent("android.settings.NOTIFICATION_ASSISTANT_LIST")
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                android.util.Log.d("NothFlows", "Opened notification assistant settings for flash alerts")
+                                result.success(true)
+                            } catch (inner: Exception) {
+                                android.util.Log.w(
+                                    "NothFlows",
+                                    "Notification assistant intent failed, opening accessibility settings: $inner",
+                                )
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                android.util.Log.d("NothFlows", "Opened accessibility settings as flash alert fallback")
+                                result.success(true)
+                            }
+                        } else {
+                            result.success(true)
+                        }
                     } catch (e: Exception) {
                         android.util.Log.e("NothFlows", "Failed to enable flash alerts", e)
                         result.error("FAILED", "Cannot enable flash alerts: ${e.message}", null)
@@ -157,9 +274,46 @@ class MainActivity: FlutterActivity() {
                         else -> 100
                     }
                     try {
-                        Settings.System.putInt(contentResolver, "haptic_feedback_intensity", intensity)
-                        android.util.Log.d("NothFlows", "Set haptic strength to $strength (intensity: $intensity)")
-                        result.success(true)
+                        var succeeded = false
+
+                        // Try to set system haptic intensity (may require privileged permission)
+                        try {
+                            Settings.System.putInt(
+                                contentResolver,
+                                "haptic_feedback_intensity",
+                                intensity,
+                            )
+                            android.util.Log.d("NothFlows", "Set haptic strength to $strength (intensity: $intensity)")
+                            succeeded = true
+                        } catch (inner: Exception) {
+                            android.util.Log.w(
+                                "NothFlows",
+                                "Direct haptic intensity change failed (likely missing permission): $inner",
+                            )
+                        }
+
+                        if (!succeeded) {
+                            // Fallback: open sound and vibration settings so the user can adjust vibration strength
+                            try {
+                                val intent = Intent(Settings.ACTION_SOUND_SETTINGS)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                android.util.Log.d("NothFlows", "Opened sound settings for haptic configuration")
+                                result.success(true)
+                            } catch (inner: Exception) {
+                                android.util.Log.e(
+                                    "NothFlows",
+                                    "Failed to open sound settings for haptics: $inner",
+                                )
+                                result.error(
+                                    "FAILED",
+                                    "Cannot set haptic strength: ${inner.message}",
+                                    null,
+                                )
+                            }
+                        } else {
+                            result.success(true)
+                        }
                     } catch (e: Exception) {
                         android.util.Log.e("NothFlows", "Failed to set haptic strength", e)
                         result.error("FAILED", "Cannot set haptic strength: ${e.message}", null)
