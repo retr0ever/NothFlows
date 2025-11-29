@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/flow_dsl.dart';
 import 'storage_service.dart';
 import 'automation_executor.dart';
+import 'tts_service.dart';
 
 /// Result of parsing a voice command
 class ParsedCommand {
@@ -41,6 +42,7 @@ class VoiceCommandService {
   final SpeechToText _speech = SpeechToText();
   final StorageService _storage = StorageService();
   final AutomationExecutor _executor = AutomationExecutor();
+  final TtsService _tts = TtsService();
 
   bool _isInitialized = false;
   bool _isListening = false;
@@ -199,7 +201,6 @@ class VoiceCommandService {
       'calm': ['calm', 'relax', 'anxiety', 'stress', 'peaceful'],
       'neurodivergent': [
         'neurodivergent',
-        'focus',
         'adhd',
         'attention',
         'distraction'
@@ -212,7 +213,11 @@ class VoiceCommandService {
     final isDeactivating = lower.contains('deactivate') ||
         lower.contains('disable') ||
         lower.contains('turn off') ||
+        lower.contains('turnoff') ||
+        lower.contains('off') ||
         lower.contains('stop');
+
+    debugPrint('[VoiceCommand] isDeactivating: $isDeactivating');
 
     // Check for mode keywords
     for (final entry in modePatterns.entries) {
@@ -329,6 +334,7 @@ class VoiceCommandService {
   Future<List<ExecutionResult>> executeCommand(ParsedCommand command) async {
     if (!command.isValid) {
       debugPrint('[VoiceCommand] Invalid command, cannot execute');
+      await _tts.speakResponse('error.not_recognized');
       return [
         ExecutionResult(
           actionType: 'voice_command',
@@ -346,7 +352,16 @@ class VoiceCommandService {
         trigger: 'mode.on:custom',
         actions: [command.directAction!],
       );
-      return await _executor.executeFlow(flow);
+      final results = await _executor.executeFlow(flow);
+
+      // Speak result for direct action
+      if (results.isNotEmpty && results.first.success) {
+        await _tts.speakActionResult(command.directAction!.type, true);
+      } else {
+        await _tts.speakResponse('error.failed');
+      }
+
+      return results;
     }
 
     // If it's a mode trigger, find and execute the mode's flows
@@ -357,8 +372,17 @@ class VoiceCommandService {
         orElse: () => throw Exception('Mode not found: ${command.modeId}'),
       );
 
-      // Toggle the mode
-      await _storage.toggleMode(mode.id);
+      // Set the mode state based on voice command (not toggle)
+      debugPrint('[VoiceCommand] Setting mode ${mode.id} to ${command.isActivating ? "ACTIVE" : "INACTIVE"}');
+      if (command.isActivating) {
+        await _storage.setActiveMode(mode.id);
+      } else {
+        await _storage.deactivateAllModes();
+      }
+      debugPrint('[VoiceCommand] Mode state updated');
+
+      // Speak mode change
+      await _tts.speakModeChange(command.modeId!, command.isActivating);
 
       // Get flows for this event
       final flowsForEvent = mode.flows
@@ -431,6 +455,7 @@ class VoiceCommandService {
       await stopListening();
 
       if (text.isEmpty) {
+        await _tts.speakResponse('error.no_speech');
         return [
           ExecutionResult(
             actionType: 'voice_command',

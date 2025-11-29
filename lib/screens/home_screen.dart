@@ -5,6 +5,7 @@ import '../models/flow_dsl.dart';
 import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
+import '../services/tts_service.dart';
 import '../widgets/mode_card.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _storage = StorageService();
   final _executor = AutomationExecutor();
   final _voiceService = VoiceCommandService();
+  final _tts = TtsService();
 
   List<ModeModel> _modes = [];
   bool _isLoading = true;
@@ -140,6 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Toggle the mode
       await _storage.toggleMode(mode.id);
+
+      // Speak mode change
+      await _tts.speakModeChange(mode.id, isActivating);
 
       // If activating/deactivating, execute relevant flows for that event
       if (flowsForEvent.isNotEmpty) {
