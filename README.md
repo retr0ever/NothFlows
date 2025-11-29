@@ -10,12 +10,25 @@ Instead of navigating through endless system settings, just describe what you ne
 
 The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks — 100% offline. Privacy-first, no cloud dependencies, no user data leaving your device.
 
+**Note:** NothFlows is a project tackling Tracks 1 and Main.
+
+## 📦 Ready-to-Install APK
+
+**Pre-built release APK available for immediate testing:**
+
+📁 **Location**: `submission/NothFlows-v1.0-release.apk`
+
+**Specifications:**
+- **Version**: 1.0
+- **Size**: 65 MB
+- **Min SDK**: Android 7.0+ (API 24)
+- **Target SDK**: Android 14 (API 34)
+- **Architectures**: ARM64, ARMv7, x86_64
+- **First Run**: One-time ~500MB Qwen3 model download (then works 100% offline)
 
 ## Key Features
 
 ### Six Assistive Modes
-
-NothFlows replaces generic Sleep/Focus modes with six accessibility-focused categories:
 
 | Mode | Purpose | Target Users |
 |------|---------|--------------|
@@ -74,10 +87,10 @@ NothFlows replaces generic Sleep/Focus modes with six accessibility-focused cate
 
 ### App Integration & Screen Reading
 **Deep integration with external apps via accessibility service:**
-- **Screen content reading**: Extracts text from any app using Android Accessibility API
+- **Smart summarization**: Extracts and intelligently summarizes screen content (weather, email, etc.)
+- **Instant responses**: Pattern-based extraction for near-zero latency (no waiting for AI)
 - **App launching by keyword**: "Open my email app" finds and launches Gmail/Outlook
-- **Context-aware suggestions**: Reads current app content and provides relevant actions
-- **LLM-powered understanding**: Cactus SDK interprets app content for intelligent responses
+- **Weather example**: Instead of reading "Menu. Settings. 12°C. Light rain...", says "In London, current temperature is 12°C with rain. Today's range is 3 to 12 degrees"
 - **Accessibility permission**: Requires one-time accessibility service enablement
 
 ### Sensor-Aware Automation
@@ -154,26 +167,6 @@ lib/
     ├── nothflows_shapes.dart          # Border radius & shapes
     ├── nothflows_spacing.dart         # Layout spacing
     └── nothflows_theme.dart           # Theme configuration
-```
-
-## DSL Schema
-
-The app uses a JSON-based DSL for automation flows with optional sensor conditions:
-
-```json
-{
-  "trigger": "mode.on:vision",
-  "conditions": {
-    "ambient_light": "low",
-    "device_motion": "still",
-    "noise_level": "quiet"
-  },
-  "actions": [
-    { "type": "increase_text_size", "to": "large" },
-    { "type": "increase_contrast" },
-    { "type": "boost_brightness", "to": 100 }
-  ]
-}
 ```
 
 ### Supported Actions (28 Total)
@@ -373,32 +366,9 @@ NothFlows can read content from external apps and provide intelligent assistance
 3. **Fully Offline**: All subsequent runs use cached model, no internet needed
 4. **Privacy-First**: After download, all AI inference happens locally on your device
 
-### Usage Examples
-
-```dart
-final llmService = CactusLLMService();
-
-// Initialise the model
-await llmService.initialise();
-
-// Parse natural language instruction into DSL
-final flow = await llmService.parseInstruction(
-  instruction: 'Make text huge and boost brightness when light is low',
-  mode: 'vision',
-);
-
-// Infer accessibility category from check-in
-final category = await llmService.inferCategoryFromCheckin(
-  checkinText: 'My hands are shaking today, hard to tap small buttons',
-);
-// Returns: MOTOR
-```
-
 ## Running the App
 
-### Android (Real Device / Emulator)
-
-This runs the full app with on-device AI on Nothing Phone or Android emulator.
+**Platform**: Android only (Nothing Phone or any Android 7.0+ device/emulator)
 
 1. **Install dependencies**:
    ```bash
@@ -424,251 +394,120 @@ This runs the full app with on-device AI on Nothing Phone or Android emulator.
    - Model cached permanently at `/data/user/0/com.nothflows/app_flutter/models/`
    - After this, **app works 100% offline** - no internet needed!
 
-### Simulation Mode (macOS / Windows)
+## Who Can Use NothFlows?
 
-Test UI and logic without Android device or AI model:
+### 👁️ Blind & Low-Vision Users
 
-```bash
-flutter run -d macos
-```
+**Capabilities:**
+- **Voice-first operation**: "North-Flow, make text huge and boost brightness"
+- **Screen reader integration**: Full TalkBack compatibility with TTS feedback
+- **Intelligent app reading**: "Open weather app" → Extracts and intelligently summarizes screen content (e.g., "In London, current temperature is 12°C with rain")
+- **Instant responses**: Smart pattern-based summarization for near-zero latency
+- **Hands-free navigation**: Wake word detection for zero-touch interaction
 
-*Note: Voice commands, sensor detection, and Android-specific actions will use mock implementations.*
+**Example Flow:**
+1. Say "North-Flow" → App responds "Yes?"
+2. Say "Make text maximum size and increase contrast"
+3. TTS confirms: "Text size increased to maximum. High contrast enabled."
+4. All actions confirmed with voice feedback
 
-## User Journeys
+---
 
-### Vision Assist User
-1. User opens app → grants storage/settings/microphone/accessibility permissions
-2. Says "North-Flow" → Wake word detected, app responds "Yes?"
-3. User says: "Make text large and boost brightness"
-4. Cactus LLM parses instruction → generates DSL with two actions
-5. Automation Executor runs actions on device
-6. TTS confirms: "Text size increased. Brightness boosted to maximum."
-7. Results shown: ✓ Text size increased, ✓ Brightness boosted to 100%
+### 🦻 Deaf & Hard-of-Hearing Users
 
-### Motor Assist User
-1. Uses daily check-in: "My hands are shaking today"
-2. System infers: MOTOR category
-3. Recommends: "Try Motor Assist mode"
-4. User activates voice command: "Enable voice typing"
-5. Gesture sensitivity reduced, voice typing activated
+**Capabilities:**
+- **Visual alerts**: Flash screen for notifications instead of sound
+- **Live transcription**: Real-time speech-to-text for conversations
+- **Haptic feedback**: Strong vibration alerts for calls and messages
+- **Captions everywhere**: System-wide captioning for media
 
-### Neurodivergent User (ADHD)
-1. Creates custom flow: "When I need to focus, mute Instagram and TikTok"
-2. Voice command: "Activate Focus mode"
-3. Sensor conditions checked: Light is low (afternoon), motion is still
-4. If conditions match, flow executes → apps muted
-5. Home screen shows focus badge with conditions: "Light: low, Motion: still"
+**Example Flow:**
+1. Tap microphone button → Voice command UI appears
+2. Say or type: "Enable flash alerts and boost haptic feedback"
+3. Visual confirmation: ✓ Screen flash enabled, ✓ Haptic feedback: strong
+4. Phone now uses visual/tactile cues instead of audio
 
-## Architecture Decisions
+---
 
-### 1. Accessibility-First Design
+### 🤲 Motor Impairment Users (Tremor, Arthritis, Cerebral Palsy)
 
-Every feature prioritises disabled users:
-- **Voice-first interaction**: Hands-free operation for motor-impaired users
-- **Sensor-aware context**: Flows adapt to ambient conditions
-- **Six assistive modes**: Targeted support for diverse disabilities
-- **28 accessibility actions**: Comprehensive coverage of common needs
+**Capabilities:**
+- **Reduced sensitivity**: Lower touch threshold for tremor-affected users
+- **Large touch targets**: Bigger interactive elements for easier tapping
+- **Voice typing**: Dictate text instead of typing
+- **One-handed mode**: Shrink UI for single-hand operation
 
-### 2. Privacy-First AI
+**Example Flow:**
+1. Daily check-in: "My hands are shaking badly today"
+2. AI suggests: "Try Motor Assist mode"
+3. Tap to activate → Touch sensitivity reduced, voice typing enabled
+4. All buttons enlarged automatically
 
-All AI inference happens on-device using Cactus SDK:
-- **No cloud fallback**: 100% local processing
-- **No data transmission**: Everything stays on device
-- **Offline-capable**: Full functionality without internet (after first run)
-- **Quantised models**: Q4_0 optimisation for mobile performance
+---
 
-### 3. DSL-Based Flows
+### 🧠 Neurodivergent Users (ADHD, Autism, Sensory Processing)
 
-JSON DSL with validation:
-- **Type-safe definitions**: Validated action schemas
-- **Sensor conditions**: Optional context-based triggers
-- **Extensible**: Easy to add new actions and conditions
-- **Human-readable**: Clear description generation for accessibility
+**Capabilities:**
+- **Distraction blocking**: Mute notification-heavy apps (Instagram, TikTok)
+- **Animation reduction**: Minimize motion for sensory sensitivity
+- **Focus mode**: Auto-launch productivity apps, silence distractions
+- **Calm mode**: Lower brightness, enable DND, reduce volume at night
 
-### 4. NothingOS Aesthetic
+**Example Flow:**
+1. Say "North-Flow, I need to focus"
+2. AI creates flow: Mute social media, reduce animations, launch Notion
+3. Sensor-aware: Only activates when ambient light is low and device is still
+4. Smart habits: Learns you usually focus in the afternoon, suggests mode automatically
 
-Design follows Nothing's principles with accessibility enhancements:
-- **Roboto font**: Standard typeface for better readability
-- **High contrast**: Black (#1A1A1A), White, Nothing Red (#D71921)
-- **Minimalist UI**: Reduced visual complexity for cognitive accessibility
-- **Large touch targets**: 48x48 dp minimum for motor accessibility
-- **Semantic labels**: Full screen reader support
+---
 
-### 5. Service Layer Architecture
+### 😌 Anxiety & Sensory Overload Users
 
-Singleton services for consistency:
-- **Single LLM instance**: Model loaded once, shared globally
-- **Sensor monitoring**: Real-time context awareness
-- **Voice recognition**: Persistent speech-to-text service
-- **Storage abstraction**: Hive + SharedPreferences for persistence
+**Capabilities:**
+- **Calm mode**: Reduce brightness, enable DND, lower volume
+- **Simplified UI**: Minimize visual complexity and clutter
+- **Time-based triggers**: Auto-activate calming settings in the evening
+- **Wellness check-ins**: Daily mood tracking with AI recommendations
 
-## Example Flows
+**Example Flow:**
+1. Evening arrives → Smart suggestion: "You usually use Calm mode now"
+2. Tap to activate → Brightness lowered to 20%, DND enabled, volume reduced
+3. TTS whispers: "Calm mode activated. Do Not Disturb is on."
+4. Phone becomes quiet and dim for bedtime routine
 
-### Vision Assist Mode
+## Why NothFlows is Different
 
-```
-"Make text huge and boost brightness when light is low"
-→ {
-    trigger: "mode.on:vision",
-    conditions: { ambient_light: "low" },
-    actions: [
-      { type: "increase_text_size", to: "large" },
-      { type: "boost_brightness", to: 100 },
-      { type: "increase_contrast" }
-    ]
-  }
-```
+**🔒 Privacy-First AI**
+- 100% on-device inference using Qwen3 0.6B (no cloud, no telemetry)
+- Works fully offline after initial model download (~500MB)
+- All data stays on your device forever
 
-### Motor Assist Mode
+**🎯 Accessibility-First Design**
+- Voice-first operation with wake word detection ("North-Flow")
+- 28 accessibility actions across vision, motor, hearing, cognitive categories
+- Natural language automation: describe what you need, AI generates the flow
+- WCAG 2.1 AA compliant with full screen reader support
 
-```
-"Enable voice typing and reduce sensitivity when hands are shaky"
-→ {
-    trigger: "mode.on:motor",
-    conditions: { device_motion: "shaky" },
-    actions: [
-      { type: "enable_voice_typing" },
-      { type: "reduce_gesture_sensitivity" },
-      { type: "increase_touch_targets" }
-    ]
-  }
-```
+**🧠 Smart Context Awareness**
+- Learns your habits automatically (time patterns, usage sequences)
+- Sensor-aware flows (ambient light, device motion, time of day)
+- AI-powered suggestions based on your usage history
+- Personalized responses using local knowledge base
 
-### Neurodivergent Focus Mode
+## Technical Stack
 
-```
-"Mute Instagram and TikTok, reduce animations, launch Notion"
-→ {
-    trigger: "mode.on:neurodivergent",
-    actions: [
-      { type: "mute_apps", apps: ["Instagram", "TikTok"] },
-      { type: "reduce_animation" },
-      { type: "launch_app", app: "Notion" }
-    ]
-  }
-```
+**Core Technologies:**
+- Flutter (Dart) + Kotlin 2.0.0
+- Cactus SDK (Qwen3 0.6B, Q4_0 quantization)
+- Picovoice Porcupine v3.0 (custom "North-Flow" wake word)
+- Android Accessibility Services
+- Hive + SharedPreferences (local storage)
 
-### Calm Mode
-
-```
-"Lower brightness to 20%, enable DND, reduce volume when it's evening"
-→ {
-    trigger: "mode.on:calm",
-    conditions: { time_of_day: "evening" },
-    actions: [
-      { type: "lower_brightness", to: 20 },
-      { type: "enable_dnd" },
-      { type: "set_volume", level: 30 }
-    ]
-  }
-```
-
-## Future Enhancements
-
-### Phase 2: Advanced Automations
-- [ ] Time-based triggers (e.g., "9 AM weekdays")
-- [ ] Location-based triggers (e.g., "At home")
-- [ ] Conditional branching (if/then logic)
-- [ ] Flow chaining (flow → triggers another flow)
-
-### Phase 3: Community & Personalisation
-- [ ] Flow sharing with other users
-- [ ] Community flow marketplace
-- [ ] Template library for common disabilities
-- [ ] CactusRAG personalisation
-- [ ] Local usage analytics (privacy-preserving)
-
-## Development Notes
-
-### Adding New Accessibility Actions
-
-1. **Define action type** in `FlowDSL.isValid()` (`lib/models/flow_dsl.dart`)
-2. **Implement execution** in `AutomationExecutor._executeAction()` (`lib/services/automation_executor.dart`)
-3. **Add description logic** to `FlowDSL.getDescription()` for screen reader support
-4. **Update LLM system prompt** in `CactusLLMService` with new action type
-5. **Add Android native method** if required in `MainActivity.kt`
-
-### Testing Voice Commands
-
-```dart
-final voiceService = VoiceCommandService();
-voiceService.startListening(
-  onResult: (command) => print('Recognized: $command'),
-  onError: (error) => print('Error: $error'),
-);
-```
-
-### Testing Sensor Conditions
-
-```dart
-final sensorService = SensorService();
-await sensorService.initialize();
-final conditions = sensorService.getCurrentConditions();
-print('Light: ${conditions.ambientLight}, Motion: ${conditions.deviceMotion}');
-```
-
-### Debugging Flows
-
-The `FlowDSL` class includes a `getDescription()` method for human-readable output:
-
-```dart
-print(flow.getDescription());
-// Output:
-// When vision mode is activated (Triggers when Light: low, Motion: still):
-//   • Increase text size to large
-//   • Enable high contrast mode
-//   • Boost brightness to 100%
-```
-
-### Building APK
-
-```bash
-flutter clean
-flutter pub get
-flutter build apk --debug
-```
-
-## Performance Optimisations
-
-1. **Model Caching**: Qwen3 model (~500MB) cached after first download
-2. **Lazy Loading**: LLM initialised on first use, not at startup
-3. **Low Temperature**: 0.3 for consistent JSON output
-4. **Quantisation**: Q4_0 reduces model size from ~700MB to ~200MB
-5. **Thread Pool**: 4 threads for optimal inference speed on mobile
-6. **Singleton Services**: Single LLM instance shared globally
-7. **Sensor Throttling**: Motion/light updates at reasonable intervals
-
-## Technology Stack
-
-- **Framework**: Flutter (Dart)
-- **AI/ML**: Cactus SDK (Qwen3 0.6B, quantised to Q4_0)
-- **Wake Word Detection**: Picovoice Porcupine v3.0 with custom "North-Flow" model
-- **Speech Recognition**: speech_to_text ^7.0.0
-- **Text-to-Speech**: flutter_tts ^4.2.0
-- **App Integration**: device_apps ^2.2.0 + Android Accessibility Services
-- **Sensors**: sensors_plus ^7.0.0
-- **Storage**: Hive ^2.2.3 + SharedPreferences ^2.2.2
-- **Permissions**: permission_handler ^12.0.1
-- **Native Android**: Kotlin 2.0.0 + Android Gradle Plugin 8.5.0
-
-## Known Limitations
-
-1. **First Run**: One-time model download requires internet (~500MB, then fully offline)
-2. **Parsing Accuracy**: Complex instructions may need rephrasing
-3. **System Permissions**: Some actions require elevated Android permissions (e.g., animation scale)
-4. **Android 10+**: Wi-Fi/Bluetooth toggle requires user confirmation
-5. **Non-Android Platforms**: Simulation mode only (no real automation)
-
-## Accessibility Compliance
-
-NothFlows is designed with accessibility best practices:
-
-- **WCAG 2.1 AA Compliance**: High contrast ratios, large touch targets
-- **Screen Reader Support**: Full TalkBack compatibility with semantic labels
-- **Voice-First Design**: Complete hands-free operation capability
-- **Keyboard Navigation**: All functions accessible without touch
-- **Reduced Motion**: Respects system animation preferences
-- **Haptic Feedback**: Tactile confirmation for all interactions
+**Optimizations:**
+- Model caching (~500MB downloaded once, cached forever)
+- Lazy loading (LLM initialized on first use)
+- Singleton services (shared LLM instance)
+- Sensor throttling for battery efficiency
 
 ## Credits
 

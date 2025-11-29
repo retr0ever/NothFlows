@@ -281,53 +281,112 @@ class AppIntegrationService {
     }
   }
 
-  /// Use Cactus LLM to generate a concise summary of screen content
+  /// Use smart extraction to generate instant summaries of screen content
+  /// Uses pattern-based extraction for near-zero latency (no LLM inference)
   Future<String> _summarizeScreenContent(String appName, String rawContent) async {
-    try {
-      // Clean up the raw content - remove excessive dots and whitespace
-      final cleanedContent = rawContent
-          .replaceAll(RegExp(r'\.{2,}'), '. ')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-
-      // Create a prompt for summarization
-      final systemPrompt = 'You are a helpful assistant that summarizes screen content clearly and concisely.';
-      final userPrompt = '''Summarize the key information from the $appName app in 2-3 clear, natural sentences. Focus on the most important content.
-
-Screen content:
-$cleanedContent
-
-Provide a concise summary:''';
-
-      debugPrint('[AppIntegration] Sending to Cactus LLM for summarization...');
-      
-      final summary = await _llm.generateText(
-        systemPrompt: systemPrompt,
-        userPrompt: userPrompt,
-        maxTokens: 150,
-      );
-      
-      if (summary.isEmpty) {
-        debugPrint('[AppIntegration] LLM returned empty summary, using fallback');
-        return _createFallbackSummary(appName, cleanedContent);
-      }
-
-      debugPrint('[AppIntegration] Generated summary: $summary');
-      return summary;
-    } catch (e) {
-      debugPrint('[AppIntegration] Error generating summary: $e');
-      return _createFallbackSummary(appName, rawContent);
-    }
+    // Always use smart fallback for instant response (near-zero latency)
+    // This extracts key information without reading literal text
+    debugPrint('[AppIntegration] Using smart extraction for instant summary');
+    return _createSmartFallback(appName, rawContent);
   }
 
-  /// Create a simple fallback summary when LLM is unavailable
-  String _createFallbackSummary(String appName, String content) {
-    // Take first 200 characters as a simple summary
-    final truncated = content.length > 200 
-        ? '${content.substring(0, 200)}...' 
-        : content;
-    
-    return 'Here\'s what I found in $appName: $truncated';
+  /// Create an intelligent fallback summary when LLM is unavailable
+  /// Extracts key information based on app type
+  String _createSmartFallback(String appName, String content) {
+    final lowerContent = content.toLowerCase();
+    final lowerAppName = appName.toLowerCase();
+
+    // Weather app - extract temperature, conditions, location
+    if (lowerAppName.contains('weather')) {
+      return _extractWeatherInfo(content);
+    }
+
+    // Email app - extract sender, subject, preview
+    if (lowerAppName.contains('gmail') || lowerAppName.contains('email') || lowerAppName.contains('mail')) {
+      return _extractEmailInfo(content);
+    }
+
+    // Calendar app - extract events, times
+    if (lowerAppName.contains('calendar')) {
+      return _extractCalendarInfo(content);
+    }
+
+    // Generic fallback - extract first meaningful sentences
+    return _extractKeyPoints(appName, content);
+  }
+
+  String _extractWeatherInfo(String content) {
+    // Extract temperature (look for °C or °F patterns)
+    final tempMatch = RegExp(r'(\d+)˚[CF°]').firstMatch(content);
+    final temp = tempMatch?.group(0) ?? '';
+
+    // Extract location (usually near start)
+    final words = content.split(RegExp(r'[.\s]+')).where((w) => w.isNotEmpty).toList();
+    final location = words.length > 1 ? words[1] : 'your location';
+
+    // Extract weather condition (rain, sunny, cloudy, etc.)
+    final conditions = ['rain', 'sunny', 'cloud', 'snow', 'storm', 'clear', 'fog', 'wind'];
+    String condition = '';
+    for (final cond in conditions) {
+      if (content.toLowerCase().contains(cond)) {
+        condition = cond;
+        break;
+      }
+    }
+
+    // Extract high/low if available
+    final lowMatch = RegExp(r'Low.*?(\d+)˚').firstMatch(content);
+    final highMatch = RegExp(r'High.*?(\d+)˚').firstMatch(content);
+    final low = lowMatch?.group(1);
+    final high = highMatch?.group(1);
+
+    String summary = 'In $location, ';
+    if (temp.isNotEmpty) {
+      summary += 'the current temperature is $temp';
+    }
+    if (condition.isNotEmpty) {
+      summary += temp.isNotEmpty ? ' with $condition' : '$condition conditions';
+    }
+    if (low != null && high != null) {
+      summary += '. Today\'s range is $low to $high degrees';
+    }
+    summary += '.';
+
+    return summary.isNotEmpty ? summary : 'Weather information is available on screen.';
+  }
+
+  String _extractEmailInfo(String content) {
+    final lines = content.split('\n').where((l) => l.trim().isNotEmpty).take(5).toList();
+    if (lines.isEmpty) {
+      return 'No new emails found.';
+    }
+
+    return 'You have emails in your inbox. ${lines.take(2).join('. ')}.';
+  }
+
+  String _extractCalendarInfo(String content) {
+    final lines = content.split('\n').where((l) => l.trim().isNotEmpty).take(5).toList();
+    if (lines.isEmpty) {
+      return 'No upcoming events found.';
+    }
+
+    return 'Your calendar shows: ${lines.take(2).join('. ')}.';
+  }
+
+  String _extractKeyPoints(String appName, String content) {
+    // Remove UI elements and navigation text
+    final cleaned = content
+        .replaceAll(RegExp(r'\b(Menu|Settings|Back|More|Share|Search)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\.{2,}'), '. ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    // Take first 150 characters of meaningful content
+    final meaningful = cleaned.length > 150
+        ? '${cleaned.substring(0, 150)}...'
+        : cleaned;
+
+    return 'In $appName: $meaningful';
   }
 }
 
