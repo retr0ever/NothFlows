@@ -25,6 +25,9 @@ class PermissionService {
     results['Bluetooth'] = await Permission.bluetooth.isGranted;
     results['Bluetooth Connect'] = await Permission.bluetoothConnect.isGranted;
 
+    // Voice command permissions
+    results['Microphone'] = await Permission.microphone.isGranted;
+
     return results;
   }
 
@@ -41,6 +44,7 @@ class PermissionService {
       Permission.accessNotificationPolicy,
       Permission.bluetooth,
       Permission.bluetoothConnect,
+      Permission.microphone,
     ];
 
     final results = await permissions.request();

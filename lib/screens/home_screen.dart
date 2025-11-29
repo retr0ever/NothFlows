@@ -4,6 +4,7 @@ import '../models/mode_model.dart';
 import '../models/flow_dsl.dart';
 import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
+import '../services/voice_command_service.dart';
 import '../widgets/mode_card.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
@@ -19,15 +20,102 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _storage = StorageService();
   final _executor = AutomationExecutor();
+  final _voiceService = VoiceCommandService();
 
   List<ModeModel> _modes = [];
   bool _isLoading = true;
   final bool _isSimulation = !Platform.isAndroid;
 
+  // Voice command state
+  bool _isListening = false;
+  String _recognizedText = '';
+
   @override
   void initState() {
     super.initState();
     _loadModes();
+    _initVoiceService();
+  }
+
+  Future<void> _initVoiceService() async {
+    _voiceService.onResult = (text, isFinal) {
+      setState(() => _recognizedText = text);
+      if (isFinal && text.isNotEmpty) {
+        _processVoiceCommand(text);
+      }
+    };
+
+    _voiceService.onListeningStateChanged = (isListening) {
+      if (mounted) {
+        setState(() => _isListening = isListening);
+      }
+    };
+
+    _voiceService.onError = (error) {
+      debugPrint('[HomeScreen] Voice error: $error');
+      if (mounted) {
+        _showSnackBar('Voice error: $error');
+      }
+    };
+  }
+
+  Future<void> _processVoiceCommand(String text) async {
+    final command = _voiceService.parseCommand(text);
+
+    if (!command.isValid) {
+      _showSnackBar('Command not recognized: "$text"');
+      return;
+    }
+
+    // Show what we're doing
+    if (command.modeId != null) {
+      _showSnackBar(
+        '${command.isActivating ? "Activating" : "Deactivating"} ${command.modeId} mode...',
+      );
+    } else if (command.directAction != null) {
+      _showSnackBar('Executing: ${command.directAction!.type}...');
+    }
+
+    // Execute the command
+    final results = await _voiceService.executeCommand(command);
+
+    // Reload modes to reflect any changes
+    await _loadModes();
+
+    // Show results
+    if (results.isNotEmpty && mounted) {
+      final successCount = results.where((r) => r.success).length;
+      if (successCount == results.length) {
+        _showSnackBar('Command completed successfully');
+      } else {
+        _showSnackBar('Completed with ${results.length - successCount} errors');
+      }
+    }
+  }
+
+  Future<void> _toggleVoiceListening() async {
+    if (_isListening) {
+      await _voiceService.stopListening();
+      setState(() {
+        _isListening = false;
+        _recognizedText = '';
+      });
+    } else {
+      // Check permission first
+      final hasPermission = await _voiceService.hasMicrophonePermission();
+      if (!hasPermission) {
+        final granted = await _voiceService.requestMicrophonePermission();
+        if (!granted) {
+          _showSnackBar('Microphone permission required for voice commands');
+          return;
+        }
+      }
+
+      final started = await _voiceService.startListening();
+      if (!started) {
+        _showSnackBar('Could not start voice recognition');
+      }
+    }
   }
 
   Future<void> _loadModes() async {
@@ -274,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF000000)
           : const Color(0xFFF5F5F5),
@@ -373,10 +461,27 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
       ),
 
-      // Daily Check-In and Settings buttons
+      // FAB buttons with voice command
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Voice command button
+          FloatingActionButton(
+            onPressed: _toggleVoiceListening,
+            backgroundColor: _isListening
+                ? Colors.red
+                : const Color(0xFF5B4DFF),
+            foregroundColor: Colors.white,
+            heroTag: 'voice_command',
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                _isListening ? Icons.stop : Icons.mic,
+                key: ValueKey(_isListening),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           // Daily Check-In button
           FloatingActionButton.extended(
             onPressed: () {
@@ -403,14 +508,132 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Theme.of(context).brightness == Brightness.dark
                 ? Colors.white.withOpacity(0.1)
                 : Colors.black.withOpacity(0.05),
+            heroTag: 'settings',
             child: Icon(
               Icons.settings,
               color: Theme.of(context).iconTheme.color,
             ),
-            heroTag: 'settings',
           ),
         ],
       ),
+    );
+
+    // Wrap in Stack to show voice listening overlay
+    return Stack(
+      children: [
+        scaffold,
+        // Voice listening overlay
+        if (_isListening)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _toggleVoiceListening,
+              child: Container(
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Animated microphone
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 1.0, end: 1.3),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeInOut,
+                        builder: (context, scale, child) {
+                          return Transform.scale(
+                            scale: scale,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.4),
+                                    blurRadius: 30,
+                                    spreadRadius: 10,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.mic,
+                                color: Colors.white,
+                                size: 48,
+                              ),
+                            ),
+                          );
+                        },
+                        onEnd: () {
+                          // This creates the pulsing effect
+                          if (mounted && _isListening) {
+                            setState(() {});
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Listening text
+                      const Text(
+                        'Listening...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Recognized text
+                      if (_recognizedText.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 32),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '"$_recognizedText"',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 32),
+
+                      // Hint text
+                      Text(
+                        'Say "Activate vision assist" or "Set brightness to 50"',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 14,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Tap to cancel
+                      Text(
+                        'Tap anywhere to cancel',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

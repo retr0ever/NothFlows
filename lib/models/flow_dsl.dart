@@ -145,6 +145,9 @@ class FlowDSL {
       'boost_haptic_feedback',
       'enable_one_handed_mode',
       'increase_touch_targets',
+      // Voice command actions
+      'voice_activation',
+      'speak_response',
     };
 
     for (final action in actions) {
