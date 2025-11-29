@@ -1,6 +1,6 @@
 # NothFlows
 
-**Your Assistive Automation Engine for Nothing Phone**
+**Your Accessible Automation Engine**
 
 NothFlows is a built-in, AI-powered accessibility tool made for disabled users on Nothing Phones. It turns complicated settings into simple voice commands, so you can create helpful automations using fast, fully offline AI.
 
