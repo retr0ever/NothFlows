@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
 
   # Cactus SDK for on-device AI
-  cactus: ^1.0.2
+  cactus: ^1.2.0
 
   # State management
   provider: ^6.1.1

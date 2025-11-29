@@ -1,90 +1,227 @@
 # NothFlows
 
-NothFlows upgrades Sleep, Focus and Custom modes into smart, on‑device automations that run entirely on your Nothing Phone.
+**Your Assistive Automation Engine for Nothing Phone**
+
+NothFlows is an on-device AI-powered accessibility automation platform designed specifically for disabled users on Nothing Phones. It transforms complex accessibility settings into simple, voice-activated automation flows using 100% local AI inference.
 
 ![NothFlows logo](assets/branding/logoBanner.png)
 
-It extends familiar features like Do Not Disturb into full automation flows you set up just by saying what you want, instead of tapping through settings.
+Instead of navigating through endless system settings, just describe what you need: "Make text huge and boost brightness" or "Mute distracting apps when I need to focus."
 
-For example: “When I switch to Sleep flow, clean screenshots older than 30 days and lower brightness to 20%.”
-
-Most Nothing users today are tech enthusiasts, so NothFlows doubles as a playful “mini n8n” for power users while also making automation accessible to non‑technical users who just want to describe what they need in plain language.
-
-The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks — 100% offline.
+The app runs a local Qwen3 600M model via the Cactus SDK to parse your instructions into executable automation tasks — 100% offline. Privacy-first, no cloud dependencies, no user data leaving your device.
 
 
-### Key Features
+## Key Features
 
-- **Three Core Modes**: Sleep, Focus, and Custom
-- **Natural Language Flows**: Add automations by describing what you want
-- **100% On-Device AI**: All inference happens locally using CactusLLM
-- **NothingOS Aesthetic**: Dot-matrix typography, monochrome palette, and pixel-art UI
-- **Local Storage**: All data persists on-device
-- **Simulation Mode**: Run locally on macOS/Windows for development
+### Six Assistive Modes
+
+NothFlows replaces generic Sleep/Focus modes with six accessibility-focused categories:
+
+| Mode | Purpose | Target Users |
+|------|---------|--------------|
+| **Vision Assist** | Enhance readability | Low-vision, blind, dyslexic users |
+| **Motor Assist** | Simplify interactions | Tremor, arthritis, cerebral palsy users |
+| **Neurodivergent Focus** | Minimise distractions | ADHD, autism users |
+| **Calm Mode** | Reduce overstimulation | Anxiety, sensory processing disorder |
+| **Hearing Support** | Visual accessibility | Deaf, hard-of-hearing users |
+| **Custom Assistive** | User-defined | Everyone |
+
+### Core Capabilities
+
+- **Voice-First Interaction**: Hands-free mode activation and control via speech recognition
+- **28 Accessibility Actions**: Comprehensive action library covering vision, motor, cognitive, hearing, and system controls
+- **Sensor-Aware Automation**: Context-based triggers using ambient light, device motion, and time of day
+- **Natural Language Flows**: Add automations by describing what you need in plain English
+- **Daily Check-In**: AI-powered wellness tracking with contextual recommendations
+- **100% On-Device AI**: All inference happens locally using Cactus SDK (Qwen3 0.6B)
+- **Privacy-First**: No cloud fallback, all data stays on your device
+- **NothingOS Integration**: Deep Android accessibility service integration
+
+## Recent Updates
+
+### Voice Command Support (Latest)
+**Hands-free mode activation and control:**
+- Voice commands for mode activation: "Activate Vision mode" / "Deactivate Focus"
+- Direct action commands: "Set brightness to 50", "Enable Do Not Disturb"
+- Real-time speech-to-text recognition with confidence scoring
+- Microphone FAB button on home screen with visual feedback
+
+### Sensor-Aware Automation
+**Context-based conditional flows:**
+- Accelerometer-based device motion detection (still/walking/shaky)
+- Ambient light simulation (low/medium/high)
+- Noise level awareness (quiet/moderate/loud)
+- Flows execute only when sensor conditions match
+
+### Daily Check-In System
+**AI-powered wellness tracking:**
+- Text input for describing how you're feeling
+- Automatic category inference (VISION, MOTOR, HEARING, CALM, NEURODIVERGENT)
+- Contextual recommendations based on inferred needs
+- Personalisation service for future customisation
+
+### Comprehensive Accessibility Actions
+**28 actions across 5 categories:**
+- Vision: text size, contrast, screen reader, brightness
+- Motor: gesture sensitivity, voice typing, one-handed mode, touch targets
+- Cognitive: animation reduction, UI simplification, app muting
+- Hearing: live transcribe, captions, flash alerts, haptic feedback
+- System: DND, connectivity, volume, file cleaning, app launching
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart                       # App entry point with splash screen
+├── main.dart                           # App entry point with splash screen
 ├── models/
-│   ├── flow_dsl.dart              # DSL schema and validation
-│   └── mode_model.dart            # Mode data model
+│   ├── flow_dsl.dart                  # DSL schema with 28 actions + conditions
+│   └── mode_model.dart                # 6 assistive modes with metadata
 ├── services/
-│   ├── cactus_llm_service.dart   # Qwen3 LLM integration
-│   ├── storage_service.dart       # Local persistence layer
-│   └── automation_executor.dart   # Flow execution engine
+│   ├── cactus_llm_service.dart       # Qwen3 LLM integration
+│   ├── voice_command_service.dart     # Speech-to-text recognition (NEW)
+│   ├── sensor_service.dart            # Motion/light sensor monitoring (NEW)
+│   ├── personalization_service.dart   # Check-in logging (NEW)
+│   ├── storage_service.dart           # Local persistence (Hive + SharedPrefs)
+│   ├── automation_executor.dart       # Flow execution with Android integration
+│   └── permission_service.dart        # Runtime permission management
 ├── screens/
-│   ├── home_screen.dart           # Main screen with mode cards
-│   ├── mode_detail_screen.dart   # Flow management for a mode
-│   ├── flow_preview_sheet.dart   # Flow preview bottom sheet
-│   └── results_sheet.dart         # Execution results display
+│   ├── home_screen.dart              # Dashboard with voice FAB
+│   ├── mode_detail_screen.dart       # Flow management with conditions
+│   ├── daily_checkin_screen.dart     # Wellness check-in UI (NEW)
+│   ├── permissions_screen.dart       # Permission request flow
+│   ├── flow_preview_sheet.dart       # Flow preview bottom sheet
+│   └── results_sheet.dart            # Execution results feedback
 └── widgets/
-    ├── glass_panel.dart           # Custom container widget
-    ├── mode_card.dart             # Mode display card
-    └── flow_tile.dart             # Flow list item
+    ├── glass_panel.dart              # NothingOS aesthetic container
+    ├── mode_card.dart                # Mode card with category badge
+    ├── flow_tile.dart                # Flow list item with actions
+    └── debug_banner.dart             # Development debug overlay
 ```
 
 ## DSL Schema
 
-The app uses a simple JSON-based DSL for automation flows:
+The app uses a JSON-based DSL for automation flows with optional sensor conditions:
 
 ```json
 {
-  "trigger": "mode.on:sleep",
+  "trigger": "mode.on:vision",
+  "conditions": {
+    "ambient_light": "low",
+    "device_motion": "still",
+    "noise_level": "quiet"
+  },
   "actions": [
-    { "type": "clean_screenshots", "older_than_days": 30 },
-    { "type": "lower_brightness", "to": 20 }
+    { "type": "increase_text_size", "to": "large" },
+    { "type": "increase_contrast" },
+    { "type": "boost_brightness", "to": 100 }
   ]
 }
 ```
 
-### Supported Actions
+### Supported Actions (28 Total)
 
+#### Vision Accessibility (5 actions)
 | Action Type | Parameters | Description |
 |------------|------------|-------------|
+| `increase_text_size` | `to: small/medium/large/max` | Adjust system text size |
+| `increase_contrast` | - | Enable high contrast mode |
+| `enable_high_visibility` | - | Enable high visibility features |
+| `enable_screen_reader` | - | Activate TalkBack screen reader |
+| `boost_brightness` | `to: 0-100` | Set screen brightness |
+
+#### Motor Accessibility (4 actions)
+| Action Type | Parameters | Description |
+|------------|------------|-------------|
+| `reduce_gesture_sensitivity` | - | Lower touch sensitivity for tremors |
+| `enable_voice_typing` | - | Activate voice input |
+| `enable_one_handed_mode` | - | Shrink UI for one-hand use |
+| `increase_touch_targets` | - | Enlarge interactive elements |
+
+#### Cognitive/Neurodivergent (4 actions)
+| Action Type | Parameters | Description |
+|------------|------------|-------------|
+| `reduce_animation` | - | Minimise motion and transitions |
+| `simplify_home_screen` | - | Reduce visual complexity |
+| `mute_distraction_apps` | - | Disable notifications from distracting apps |
+| `highlight_focus_apps` | - | Emphasise productivity apps |
+
+#### Hearing Accessibility (4 actions)
+| Action Type | Parameters | Description |
+|------------|------------|-------------|
+| `enable_live_transcribe` | - | Real-time speech-to-text |
+| `enable_captions` | - | System-wide captions |
+| `flash_screen_alerts` | - | Visual notifications |
+| `boost_haptic_feedback` | `strength: light/medium/strong` | Increase vibration intensity |
+
+#### System Actions (10 actions)
+| Action Type | Parameters | Description |
+|------------|------------|-------------|
+| `lower_brightness` | `to: 0-100` | Reduce screen brightness |
+| `set_volume` | `level: 0-100` | Adjust system volume |
+| `enable_dnd` | - | Enable Do Not Disturb |
+| `disable_wifi` | - | Turn off Wi-Fi |
+| `disable_bluetooth` | - | Turn off Bluetooth |
 | `clean_screenshots` | `older_than_days` | Delete old screenshots |
 | `clean_downloads` | `older_than_days` | Delete old downloads |
-| `mute_apps` | `apps` (array) | Mute app notifications |
-| `lower_brightness` | `to` (0-100) | Set screen brightness |
-| `set_volume` | `level` (0-100) | Set system volume |
-| `enable_dnd` | - | Enable Do Not Disturb |
-| `disable_wifi` | - | Disable Wi-Fi |
-| `disable_bluetooth` | - | Disable Bluetooth |
-| `set_wallpaper` | `path` | Change wallpaper |
-| `launch_app` | `app` | Launch an application |
+| `mute_apps` | `apps: [array]` | Mute specific app notifications |
+| `launch_app` | `app: string` | Open an application |
+| `launch_care_app` | - | Open emergency contact/care app |
+
+### Sensor Conditions
+
+Flows can include optional conditions that must be met before execution:
+
+| Condition | Values | Description |
+|-----------|--------|-------------|
+| `ambient_light` | `low/medium/high` | Light level detection |
+| `device_motion` | `still/walking/shaky` | Accelerometer-based motion |
+| `noise_level` | `quiet/moderate/loud` | Audio environment (future) |
+| `time_of_day` | `morning/afternoon/evening/night` | Time-based triggers |
+| `battery_level` | `0-100` | Battery percentage threshold |
+| `is_charging` | `true/false` | Charging status |
+
+## Voice Commands
+
+The app supports hands-free operation via speech recognition:
+
+### Mode Activation Commands
+- "Activate Vision mode" / "Switch to Motor mode"
+- "Deactivate Focus" / "Turn off Calm mode"
+- Recognises keywords: vision, motor, hearing, calm, neurodivergent
+
+### Direct Action Commands
+- **Brightness**: "Set brightness to 75"
+- **Volume**: "Mute" or "Volume to 50"
+- **DND**: "Enable Do Not Disturb" / "Silence"
+- **Screenshots**: "Clean old screenshots" / "Delete screenshots 30 days old"
+- **Connectivity**: "Turn off Wi-Fi" / "Disable Bluetooth"
+
+### Implementation Details
+- Uses `speech_to_text` Flutter plugin
+- 30-second listening timeout with 3-second pause detection
+- Real-time partial results displayed during recording
+- Confidence scoring for each recognition
+- Microphone FAB button on home screen
 
 ## Cactus SDK Integration
 
 ### Model Configuration
 
-- **Model**: Qwen3 600M
-- **Quantisation**: Q4_0 (optimised for mobile)
+- **Language Model**: Qwen3 0.6B (quantised to Q4_0)
+- **Download**: One-time from Supabase (~500MB)
+- **Storage**: Cached locally on device forever
+- **Inference**: 100% on-device, no internet required after download
 - **Context Length**: 2048 tokens
-- **Mode**: Local-only (no cloud fallback)
 - **Threads**: 4 (optimised for Nothing Phone hardware)
+- **Temperature**: 0.3 (for consistent JSON output)
 
-### Usage
+**How It Works:**
+1. **First Run**: Downloads model from Supabase (requires internet once)
+2. **Cached Forever**: Model stored at `/data/user/0/com.nothflows/app_flutter/models/`
+3. **Fully Offline**: All subsequent runs use cached model, no internet needed
+4. **Privacy-First**: After download, all AI inference happens locally on your device
+
+### Usage Examples
 
 ```dart
 final llmService = CactusLLMService();
@@ -92,169 +229,228 @@ final llmService = CactusLLMService();
 // Initialise the model
 await llmService.initialise();
 
-// Parse natural language instruction
+// Parse natural language instruction into DSL
 final flow = await llmService.parseInstruction(
-  instruction: 'Clean screenshots older than 30 days and lower brightness',
-  mode: 'sleep',
+  instruction: 'Make text huge and boost brightness when light is low',
+  mode: 'vision',
 );
+
+// Infer accessibility category from check-in
+final category = await llmService.inferCategoryFromCheckin(
+  checkinText: 'My hands are shaking today, hard to tap small buttons',
+);
+// Returns: MOTOR
 ```
 
 ## Running the App
 
-### Option 1: Simulation Mode (macOS / Windows)
+### Android (Real Device / Emulator)
 
-If you want to test the UI and logic without an Android device or the heavy AI model, use simulation mode. This mocks the AI responses and executes dummy actions.
+This runs the full app with on-device AI on Nothing Phone or Android emulator.
 
-1. **Dependencies**:
+1. **Install dependencies**:
    ```bash
    flutter pub get
    ```
 
-2. **Run**:
-   ```bash
-   flutter run -d macos
-   ```
-
-   *Note: Ensure the `cactus` dependency is commented out in `pubspec.yaml` to avoid linking errors on non-Android platforms if you don't have the native libraries installed.*
-
-### Option 2: Android (Real Device / Emulator)
-
-This runs the full app with the actual Qwen3 AI model on-device.
-
-1. **Dependencies**:
-   ```bash
-   flutter pub get
-   ```
-
-2. **Permissions**:
-   The app will request the following permissions on first run:
-   - `MANAGE_EXTERNAL_STORAGE`
-   - `WRITE_SETTINGS`
-
-3. **Run**:
+2. **Connect device and run**:
    ```bash
    flutter run
    ```
 
-## Setup Instructions
+3. **Permissions**:
+   The app will request the following permissions on first run:
+   - `MANAGE_EXTERNAL_STORAGE` - For cleaning files
+   - `WRITE_SETTINGS` - For brightness/system control
+   - `RECORD_AUDIO` - For voice commands
+   - `INTERNET` - **Only needed on first run** to download Qwen3 model
 
-### 1. Install Dependencies
+4. **First run**:
+   - Qwen3 model (~500MB) downloads from Supabase automatically
+   - Takes 2-5 minutes depending on connection speed
+   - Model cached permanently at `/data/user/0/com.nothflows/app_flutter/models/`
+   - After this, **app works 100% offline** - no internet needed!
+
+### Simulation Mode (macOS / Windows)
+
+Test UI and logic without Android device or AI model:
 
 ```bash
-flutter pub get
+flutter run -d macos
 ```
 
-### 2. Configure Cactus SDK
+*Note: Voice commands, sensor detection, and Android-specific actions will use mock implementations.*
 
-Add the Cactus SDK model files to your project:
+## User Journeys
 
-```bash
-# The Qwen3 600M model will be downloaded on first run
-# and cached in the app's files directory
-```
+### Vision Assist User
+1. User opens app → grants storage/settings/microphone permissions
+2. Taps "Vision Assist" mode card
+3. Speaks: "Make text large and boost brightness"
+4. Cactus LLM parses instruction → generates DSL with two actions
+5. Automation Executor runs actions on device
+6. Results shown: ✓ Text size increased, ✓ Brightness boosted to 100%
 
-### 3. Permissions
+### Motor Assist User
+1. Uses daily check-in: "My hands are shaking today"
+2. System infers: MOTOR category
+3. Recommends: "Try Motor Assist mode"
+4. User activates voice command: "Enable voice typing"
+5. Gesture sensitivity reduced, voice typing activated
 
-The app requires the following Android permissions:
-
-- `MANAGE_EXTERNAL_STORAGE` - For cleaning files
-- `WRITE_SETTINGS` - For brightness control
-- `INTERNET` - For model downloads (first run only)
-
-These are declared in `android/app/src/main/AndroidManifest.xml`.
+### Neurodivergent User (ADHD)
+1. Creates custom flow: "When I need to focus, mute Instagram and TikTok"
+2. Voice command: "Activate Focus mode"
+3. Sensor conditions checked: Light is low (afternoon), motion is still
+4. If conditions match, flow executes → apps muted
+5. Home screen shows focus badge with conditions: "Light: low, Motion: still"
 
 ## Architecture Decisions
 
-### 1. Local-First AI
+### 1. Accessibility-First Design
 
-All AI inference happens on-device using CactusLLM. This ensures:
-- **Privacy**: No data leaves the device
-- **Performance**: No network latency
-- **Reliability**: Works offline
+Every feature prioritises disabled users:
+- **Voice-first interaction**: Hands-free operation for motor-impaired users
+- **Sensor-aware context**: Flows adapt to ambient conditions
+- **Six assistive modes**: Targeted support for diverse disabilities
+- **28 accessibility actions**: Comprehensive coverage of common needs
 
-### 2. DSL-Based Flows
+### 2. Privacy-First AI
 
-Using a JSON DSL provides:
-- **Validation**: Type-safe action definitions
-- **Extensibility**: Easy to add new actions
-- **Debugging**: Human-readable format
+All AI inference happens on-device using Cactus SDK:
+- **No cloud fallback**: 100% local processing
+- **No data transmission**: Everything stays on device
+- **Offline-capable**: Full functionality without internet (after first run)
+- **Quantised models**: Q4_0 optimisation for mobile performance
 
-### 3. Nothing OS Aesthetic
+### 3. DSL-Based Flows
 
-The design strictly follows Nothing's design principles:
-- **Dot Matrix Font**: Uses NDot-inspired typography
-- **Monochrome**: Heavy use of black, white, and grey
-- **Red Accents**: Minimal but impactful use of Nothing Red (#D71921)
-- **Dotted Borders**: Technical/industrial look instead of glassmorphism
+JSON DSL with validation:
+- **Type-safe definitions**: Validated action schemas
+- **Sensor conditions**: Optional context-based triggers
+- **Extensible**: Easy to add new actions and conditions
+- **Human-readable**: Clear description generation for accessibility
 
-### 4. Service Layer Pattern
+### 4. NothingOS Aesthetic
 
-Services are singletons for:
-- **Consistency**: Single source of truth
-- **Performance**: Model loaded once
-- **State management**: Shared storage instance
+Design follows Nothing's principles with accessibility enhancements:
+- **Roboto font**: Standard typeface for better readability
+- **High contrast**: Black (#1A1A1A), White, Nothing Red (#D71921)
+- **Minimalist UI**: Reduced visual complexity for cognitive accessibility
+- **Large touch targets**: 48x48 dp minimum for motor accessibility
+- **Semantic labels**: Full screen reader support
+
+### 5. Service Layer Architecture
+
+Singleton services for consistency:
+- **Single LLM instance**: Model loaded once, shared globally
+- **Sensor monitoring**: Real-time context awareness
+- **Voice recognition**: Persistent speech-to-text service
+- **Storage abstraction**: Hive + SharedPreferences for persistence
 
 ## Example Flows
 
-### Sleep Mode
+### Vision Assist Mode
 
 ```
-"Clean screenshots older than 30 days"
-→ { type: "clean_screenshots", older_than_days: 30 }
-
-"Lower brightness to 20%"
-→ { type: "lower_brightness", to: 20 }
-
-"Enable Do Not Disturb"
-→ { type: "enable_dnd" }
+"Make text huge and boost brightness when light is low"
+→ {
+    trigger: "mode.on:vision",
+    conditions: { ambient_light: "low" },
+    actions: [
+      { type: "increase_text_size", to: "large" },
+      { type: "boost_brightness", to: 100 },
+      { type: "increase_contrast" }
+    ]
+  }
 ```
 
-### Focus Mode
+### Motor Assist Mode
 
 ```
-"Mute Instagram, TikTok, and Twitter"
-→ { type: "mute_apps", apps: ["Instagram", "TikTok", "Twitter"] }
+"Enable voice typing and reduce sensitivity when hands are shaky"
+→ {
+    trigger: "mode.on:motor",
+    conditions: { device_motion: "shaky" },
+    actions: [
+      { type: "enable_voice_typing" },
+      { type: "reduce_gesture_sensitivity" },
+      { type: "increase_touch_targets" }
+    ]
+  }
+```
 
-"Launch Notion"
-→ { type: "launch_app", app: "Notion" }
+### Neurodivergent Focus Mode
+
+```
+"Mute Instagram and TikTok, reduce animations, launch Notion"
+→ {
+    trigger: "mode.on:neurodivergent",
+    actions: [
+      { type: "mute_apps", apps: ["Instagram", "TikTok"] },
+      { type: "reduce_animation" },
+      { type: "launch_app", app: "Notion" }
+    ]
+  }
+```
+
+### Calm Mode
+
+```
+"Lower brightness to 20%, enable DND, reduce volume when it's evening"
+→ {
+    trigger: "mode.on:calm",
+    conditions: { time_of_day: "evening" },
+    actions: [
+      { type: "lower_brightness", to: 20 },
+      { type: "enable_dnd" },
+      { type: "set_volume", level: 30 }
+    ]
+  }
 ```
 
 ## Future Enhancements
 
-### Phase 2: SmolVLM Integration
+### Phase 2: Advanced Automations
+- [ ] Time-based triggers (e.g., "9 AM weekdays")
+- [ ] Location-based triggers (e.g., "At home")
+- [ ] Conditional branching (if/then logic)
+- [ ] Flow chaining (flow → triggers another flow)
 
-- Visual flow creation using screenshots
-- OCR for app name extraction
-- Context-aware suggestions
-
-### Phase 3: Advanced Automations
-
-- Time-based triggers
-- Location-based triggers
-- Conditional logic (if/then)
-- Flow chaining
-
-### Phase 4: Community Features
-
-- Share flows with others
-- Flow marketplace
-- Template library
+### Phase 3: Community & Personalisation
+- [ ] Flow sharing with other users
+- [ ] Community flow marketplace
+- [ ] Template library for common disabilities
+- [ ] CactusRAG personalisation
+- [ ] Local usage analytics (privacy-preserving)
 
 ## Development Notes
 
-### Adding New Actions
+### Adding New Accessibility Actions
 
-1. Add action type to `FlowDSL.isValid()` in `lib/models/flow_dsl.dart:44`
-2. Implement execution in `AutomationExecutor._executeAction()` in `lib/services/automation_executor.dart:51`
-3. Add description logic to `FlowDSL.getDescription()` in `lib/models/flow_dsl.dart:83`
-4. Update system prompt in `CactusLLMService` with new action type
+1. **Define action type** in `FlowDSL.isValid()` (`lib/models/flow_dsl.dart`)
+2. **Implement execution** in `AutomationExecutor._executeAction()` (`lib/services/automation_executor.dart`)
+3. **Add description logic** to `FlowDSL.getDescription()` for screen reader support
+4. **Update LLM system prompt** in `CactusLLMService` with new action type
+5. **Add Android native method** if required in `MainActivity.kt`
 
-### Testing the LLM
-
-Use the warm-up function to test model initialisation:
+### Testing Voice Commands
 
 ```dart
-await CactusLLMService().warmUp();
+final voiceService = VoiceCommandService();
+voiceService.startListening(
+  onResult: (command) => print('Recognized: $command'),
+  onError: (error) => print('Error: $error'),
+);
+```
+
+### Testing Sensor Conditions
+
+```dart
+final sensorService = SensorService();
+await sensorService.initialize();
+final conditions = sensorService.getCurrentConditions();
+print('Light: ${conditions.ambientLight}, Motion: ${conditions.deviceMotion}');
 ```
 
 ### Debugging Flows
@@ -264,34 +460,63 @@ The `FlowDSL` class includes a `getDescription()` method for human-readable outp
 ```dart
 print(flow.getDescription());
 // Output:
-// When sleep mode is activated:
-//   • Clean screenshots older than 30 days
-//   • Set brightness to 20%
+// When vision mode is activated (Triggers when Light: low, Motion: still):
+//   • Increase text size to large
+//   • Enable high contrast mode
+//   • Boost brightness to 100%
+```
+
+### Building APK
+
+```bash
+flutter clean
+flutter pub get
+flutter build apk --debug
 ```
 
 ## Performance Optimisations
 
-1. **Model Caching**: Qwen3 model cached after first download
+1. **Model Caching**: Qwen3 model (~500MB) cached after first download
 2. **Lazy Loading**: LLM initialised on first use, not at startup
-3. **Low Temperature**: Set to 0.3 for consistent JSON output
-4. **Quantisation**: Q4_0 reduces model size by ~75%
-5. **Thread Pool**: 4 threads for optimal inference speed
+3. **Low Temperature**: 0.3 for consistent JSON output
+4. **Quantisation**: Q4_0 reduces model size from ~700MB to ~200MB
+5. **Thread Pool**: 4 threads for optimal inference speed on mobile
+6. **Singleton Services**: Single LLM instance shared globally
+7. **Sensor Throttling**: Motion/light updates at reasonable intervals
+
+## Technology Stack
+
+- **Framework**: Flutter (Dart)
+- **AI/ML**: Cactus SDK (Qwen3 0.6B, quantised to Q4_0)
+- **Speech Recognition**: speech_to_text ^7.0.0
+- **Sensors**: sensors_plus ^7.0.0
+- **Storage**: Hive ^2.2.3 + SharedPreferences ^2.2.2
+- **Permissions**: permission_handler ^12.0.1
+- **Native Android**: Kotlin 2.0.0 + Android Gradle Plugin 8.5.0
 
 ## Known Limitations
 
-1. **First Run**: Initial model download requires internet (~500MB)
+1. **First Run**: One-time model download requires internet (~500MB, then fully offline)
 2. **Parsing Accuracy**: Complex instructions may need rephrasing
-3. **System Permissions**: Some actions require elevated Android permissions
-4. **Android 10+**: Wi-Fi/Bluetooth toggle requires user interaction
+3. **System Permissions**: Some actions require elevated Android permissions (e.g., animation scale)
+4. **Android 10+**: Wi-Fi/Bluetooth toggle requires user confirmation
+5. **Non-Android Platforms**: Simulation mode only (no real automation)
 
-## Licence
+## Accessibility Compliance
 
-MIT
+NothFlows is designed with accessibility best practices:
 
-<<<<<<< HEAD
----
-=======
---
->>>>>>> 7b32474 (android studio edits)
+- **WCAG 2.1 AA Compliance**: High contrast ratios, large touch targets
+- **Screen Reader Support**: Full TalkBack compatibility with semantic labels
+- **Voice-First Design**: Complete hands-free operation capability
+- **Keyboard Navigation**: All functions accessible without touch
+- **Reduced Motion**: Respects system animation preferences
+- **Haptic Feedback**: Tactile confirmation for all interactions
 
-Built with ❤️ for Nothing users by Team Lotus
+## Credits
+
+Built for Nothing users by **Team Lotus**
+
+**Licence**: MIT
+
+**Privacy Policy**: All data stays on your device. No cloud, no tracking, no telemetry.

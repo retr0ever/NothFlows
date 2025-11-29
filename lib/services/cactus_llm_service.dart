@@ -16,26 +16,62 @@ class CactusLLMService {
   bool _isLoading = false;
 
   /// System prompt that enforces DSL output format
-  static const String systemPrompt = '''Convert to JSON. Output ONLY the JSON, nothing else.
+  static const String systemPrompt = '''Convert accessibility instructions to JSON DSL. Output ONLY the JSON, nothing else.
 
 Schema: {"trigger": "mode.on:MODE", "actions": [{"type": "TYPE", "param": value}]}
 
-Actions:
-- clean_screenshots: older_than_days
-- clean_downloads: older_than_days
-- mute_apps: apps
-- lower_brightness: to
-- set_volume: level
+Modes: vision, motor, neurodivergent, calm, hearing, custom, sleep, focus
+
+Actions by Category:
+
+VISION (5):
+- increase_text_size: to (small/medium/large/max)
+- increase_contrast: (no params)
+- enable_high_visibility: (no params)
+- enable_screen_reader: (no params)
+- boost_brightness: to (0-100)
+
+MOTOR (4):
+- reduce_gesture_sensitivity: (no params)
+- enable_voice_typing: (no params)
+- enable_one_handed_mode: (no params)
+- increase_touch_targets: (no params)
+
+COGNITIVE/NEURODIVERGENT (4):
+- reduce_animation: (no params)
+- simplify_home_screen: (no params)
+- mute_distraction_apps: (no params)
+- highlight_focus_apps: (no params)
+
+HEARING (4):
+- enable_live_transcribe: (no params)
+- enable_captions: (no params)
+- flash_screen_alerts: (no params)
+- boost_haptic_feedback: strength (light/medium/strong)
+
+SYSTEM (11):
+- lower_brightness: to (0-100)
+- set_volume: level (0-100)
 - enable_dnd: (no params)
 - disable_wifi: (no params)
 - disable_bluetooth: (no params)
-- set_wallpaper: path
-- launch_app: app
+- clean_screenshots: older_than_days (number)
+- clean_downloads: older_than_days (number)
+- mute_apps: apps (array of strings)
+- launch_app: app (string)
+- launch_care_app: (no params)
 
-Example: "lower brightness to 20"
-Output: {"trigger": "mode.on:custom", "actions": [{"type": "lower_brightness", "to": 20}]}
+Examples:
+Input: "Make text large and boost brightness"
+Output: {"trigger": "mode.on:vision", "actions": [{"type": "increase_text_size", "to": "large"}, {"type": "boost_brightness", "to": 100}]}
 
-NO explanations. NO thinking. ONLY JSON.''';
+Input: "Enable voice typing and reduce sensitivity"
+Output: {"trigger": "mode.on:motor", "actions": [{"type": "enable_voice_typing"}, {"type": "reduce_gesture_sensitivity"}]}
+
+Input: "Mute Instagram and TikTok, reduce animations"
+Output: {"trigger": "mode.on:neurodivergent", "actions": [{"type": "mute_apps", "apps": ["Instagram", "TikTok"]}, {"type": "reduce_animation"}]}
+
+NO explanations. NO thinking. NO markdown. ONLY JSON.''';
 
   /// Initialise the Qwen3 0.6B model
   Future<void> initialise() async {
@@ -180,7 +216,69 @@ Generate the DSL JSON:'''),
     final numberMatch = RegExp(r'(\d+)').firstMatch(instruction);
     final extractedNumber = numberMatch != null ? int.parse(numberMatch.group(1)!) : null;
 
-    // Heuristic matching for common actions
+    // VISION ACTIONS
+    if (lower.contains('text size') || lower.contains('text large') || lower.contains('text huge')) {
+      final size = lower.contains('huge') || lower.contains('max') ? 'max' : 'large';
+      actions.add({'type': 'increase_text_size', 'to': size});
+    }
+    if (lower.contains('contrast')) {
+      actions.add({'type': 'increase_contrast'});
+    }
+    if (lower.contains('visibility') || lower.contains('high visibility')) {
+      actions.add({'type': 'enable_high_visibility'});
+    }
+    if (lower.contains('screen reader') || lower.contains('talkback')) {
+      actions.add({'type': 'enable_screen_reader'});
+    }
+    if (lower.contains('boost brightness') || lower.contains('increase brightness')) {
+      final level = extractedNumber ?? 100;
+      actions.add({'type': 'boost_brightness', 'to': level});
+    }
+
+    // MOTOR ACTIONS
+    if (lower.contains('gesture') || lower.contains('sensitivity')) {
+      actions.add({'type': 'reduce_gesture_sensitivity'});
+    }
+    if (lower.contains('voice typing') || lower.contains('voice input')) {
+      actions.add({'type': 'enable_voice_typing'});
+    }
+    if (lower.contains('one hand') || lower.contains('one-handed')) {
+      actions.add({'type': 'enable_one_handed_mode'});
+    }
+    if (lower.contains('touch target') || lower.contains('bigger buttons')) {
+      actions.add({'type': 'increase_touch_targets'});
+    }
+
+    // COGNITIVE/NEURODIVERGENT ACTIONS
+    if (lower.contains('animation') || lower.contains('reduce motion')) {
+      actions.add({'type': 'reduce_animation'});
+    }
+    if (lower.contains('simplify') || lower.contains('home screen')) {
+      actions.add({'type': 'simplify_home_screen'});
+    }
+    if (lower.contains('distraction') || (lower.contains('mute') && lower.contains('app'))) {
+      actions.add({'type': 'mute_distraction_apps'});
+    }
+    if (lower.contains('focus app') || lower.contains('highlight')) {
+      actions.add({'type': 'highlight_focus_apps'});
+    }
+
+    // HEARING ACTIONS
+    if (lower.contains('transcribe') || lower.contains('live transcribe')) {
+      actions.add({'type': 'enable_live_transcribe'});
+    }
+    if (lower.contains('caption')) {
+      actions.add({'type': 'enable_captions'});
+    }
+    if (lower.contains('flash') || lower.contains('screen alert')) {
+      actions.add({'type': 'flash_screen_alerts'});
+    }
+    if (lower.contains('haptic') || lower.contains('vibrat')) {
+      final strength = lower.contains('strong') ? 'strong' : 'medium';
+      actions.add({'type': 'boost_haptic_feedback', 'strength': strength});
+    }
+
+    // SYSTEM ACTIONS
     if (lower.contains('screenshot')) {
       final days = extractedNumber ?? 30;
       actions.add({'type': 'clean_screenshots', 'older_than_days': days});
@@ -189,10 +287,10 @@ Generate the DSL JSON:'''),
       final days = extractedNumber ?? 30;
       actions.add({'type': 'clean_downloads', 'older_than_days': days});
     }
-    if (lower.contains('mute')) {
+    if (lower.contains('mute') && !lower.contains('distraction') && !lower.contains('app')) {
       actions.add({'type': 'mute_apps', 'apps': ['Instagram', 'TikTok']});
     }
-    if (lower.contains('brightness')) {
+    if (lower.contains('lower brightness') || (lower.contains('brightness') && !lower.contains('boost'))) {
       final level = extractedNumber ?? 20;
       actions.add({'type': 'lower_brightness', 'to': level});
     }
@@ -200,7 +298,7 @@ Generate the DSL JSON:'''),
       final level = extractedNumber ?? 30;
       actions.add({'type': 'set_volume', 'level': level});
     }
-    if (lower.contains('dnd') || lower.contains('disturb')) {
+    if (lower.contains('dnd') || lower.contains('disturb') || lower.contains('do not disturb')) {
       actions.add({'type': 'enable_dnd'});
     }
     if (lower.contains('wifi')) {
@@ -209,11 +307,10 @@ Generate the DSL JSON:'''),
     if (lower.contains('bluetooth')) {
       actions.add({'type': 'disable_bluetooth'});
     }
-    if (lower.contains('wallpaper')) {
-      actions.add({'type': 'set_wallpaper', 'path': 'assets/wallpapers/minimal.jpg'});
+    if (lower.contains('care app') || lower.contains('emergency')) {
+      actions.add({'type': 'launch_care_app'});
     }
     if (lower.contains('launch') || lower.contains('open')) {
-      // Extract potential app name
       final parts = lower.split(' ');
       String app = 'App';
       if (parts.length > 1) {
@@ -222,9 +319,27 @@ Generate the DSL JSON:'''),
       actions.add({'type': 'launch_app', 'app': app});
     }
 
-    // Default to mock action if nothing matched
+    // Default to mode-appropriate action if nothing matched
     if (actions.isEmpty) {
-       actions.add({'type': 'clean_screenshots', 'older_than_days': 7});
+      switch (mode) {
+        case 'vision':
+          actions.add({'type': 'increase_text_size', 'to': 'large'});
+          break;
+        case 'motor':
+          actions.add({'type': 'enable_voice_typing'});
+          break;
+        case 'hearing':
+          actions.add({'type': 'enable_captions'});
+          break;
+        case 'calm':
+          actions.add({'type': 'enable_dnd'});
+          break;
+        case 'neurodivergent':
+          actions.add({'type': 'reduce_animation'});
+          break;
+        default:
+          actions.add({'type': 'clean_screenshots', 'older_than_days': 7});
+      }
     }
 
     final jsonMap = {
@@ -255,6 +370,80 @@ Generate the DSL JSON:'''),
     return results;
   }
 
+  /// Infer accessibility category from check-in text
+  /// Returns one of: VISION, MOTOR, HEARING, CALM, NEURODIVERGENT, CUSTOM
+  Future<String> inferCategoryFromCheckin(String checkinText) async {
+    final lower = checkinText.toLowerCase();
+
+    // Vision-related keywords
+    if (lower.contains('see') ||
+        lower.contains('eyes') ||
+        lower.contains('vision') ||
+        lower.contains('read') ||
+        lower.contains('text') ||
+        lower.contains('screen') ||
+        lower.contains('bright') ||
+        lower.contains('contrast') ||
+        lower.contains('blur')) {
+      return 'VISION';
+    }
+
+    // Motor-related keywords
+    if (lower.contains('hand') ||
+        lower.contains('tremor') ||
+        lower.contains('shake') ||
+        lower.contains('shaking') ||
+        lower.contains('tap') ||
+        lower.contains('touch') ||
+        lower.contains('gesture') ||
+        lower.contains('motor') ||
+        lower.contains('finger') ||
+        lower.contains('arthritis') ||
+        lower.contains('coordination')) {
+      return 'MOTOR';
+    }
+
+    // Hearing-related keywords
+    if (lower.contains('hear') ||
+        lower.contains('sound') ||
+        lower.contains('loud') ||
+        lower.contains('audio') ||
+        lower.contains('noise') ||
+        lower.contains('deaf') ||
+        lower.contains('caption') ||
+        lower.contains('listening')) {
+      return 'HEARING';
+    }
+
+    // Calm/anxiety keywords
+    if (lower.contains('anxious') ||
+        lower.contains('anxiety') ||
+        lower.contains('overwhelm') ||
+        lower.contains('stress') ||
+        lower.contains('calm') ||
+        lower.contains('relax') ||
+        lower.contains('panic') ||
+        lower.contains('worry') ||
+        lower.contains('tense')) {
+      return 'CALM';
+    }
+
+    // Neurodivergent/focus keywords
+    if (lower.contains('focus') ||
+        lower.contains('adhd') ||
+        lower.contains('distract') ||
+        lower.contains('attention') ||
+        lower.contains('concentrate') ||
+        lower.contains('autism') ||
+        lower.contains('overstimulat') ||
+        lower.contains('sensory')) {
+      return 'NEURODIVERGENT';
+    }
+
+    // Default to custom
+    return 'CUSTOM';
+  }
+
   /// Get model information
   Future<Map<String, dynamic>> getModelInfo() async {
     if (!isReady) {
@@ -272,9 +461,11 @@ Generate the DSL JSON:'''),
 
     return {
       'status': 'ready',
-      'model_name': 'qwen3-0.6',
+      'model_name': 'Qwen3 0.6B (Q4_0)',
       'local_only': true,
-      'size': '~400MB',
+      'size': '~500MB',
+      'context_length': 2048,
+      'threads': 4,
     };
   }
 
@@ -321,68 +512,6 @@ Generate the DSL JSON:'''),
     return json.trim();
   }
 
-  /// Infer disability context from natural language request
-  /// Returns one of: 'vision' | 'hearing' | 'motor' | 'calm' | 'neurodivergent' | 'custom'
-  String inferDisabilityContext(String request) {
-    final lower = request.toLowerCase();
-
-    // Vision-related keywords
-    if (lower.contains('see') ||
-        lower.contains('eyes') ||
-        lower.contains('vision') ||
-        lower.contains('read') ||
-        lower.contains('text') ||
-        lower.contains('screen') ||
-        lower.contains('bright') ||
-        lower.contains('contrast')) {
-      return 'vision';
-    }
-
-    // Hearing-related keywords
-    if (lower.contains('hear') ||
-        lower.contains('sound') ||
-        lower.contains('loud') ||
-        lower.contains('audio') ||
-        lower.contains('noise') ||
-        lower.contains('deaf') ||
-        lower.contains('caption')) {
-      return 'hearing';
-    }
-
-    // Motor-related keywords
-    if (lower.contains('tap') ||
-        lower.contains('hand') ||
-        lower.contains('tremor') ||
-        lower.contains('touch') ||
-        lower.contains('gesture') ||
-        lower.contains('motor') ||
-        lower.contains('finger') ||
-        lower.contains('click')) {
-      return 'motor';
-    }
-
-    // Calm/anxiety keywords
-    if (lower.contains('anxious') ||
-        lower.contains('overwhelm') ||
-        lower.contains('stress') ||
-        lower.contains('calm') ||
-        lower.contains('relax') ||
-        lower.contains('panic')) {
-      return 'calm';
-    }
-
-    // Neurodivergent/focus keywords
-    if (lower.contains('focus') ||
-        lower.contains('adhd') ||
-        lower.contains('distract') ||
-        lower.contains('attention') ||
-        lower.contains('concentrate')) {
-      return 'neurodivergent';
-    }
-
-    // Default to custom if no keywords match
-    return 'custom';
-  }
 
   /// Dispose resources
   Future<void> dispose() async {

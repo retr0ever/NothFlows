@@ -349,40 +349,6 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Create from Screenshot button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        debugPrint('[ModeDetail] TODO: Implement screenshot-based flow creation');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Screenshot-based flow creation coming soon!'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.image),
-                      label: const Text('Create from Screenshot'),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodyMedium!
-                              .color!
-                              .withOpacity(0.3),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
                   // Example flows
                   const Text(
                     'Examples',

@@ -43,8 +43,8 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     });
 
     try {
-      // Infer disability context from user input
-      final category = _llmService.inferDisabilityContext(input);
+      // Infer accessibility category from user input
+      final category = await _llmService.inferCategoryFromCheckin(input);
 
       // Store the check-in
       await _personalizationService.storeCheckIn(input, category);
