@@ -1,16 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/mode_model.dart';
 import '../models/flow_dsl.dart';
 import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
 import '../services/tts_service.dart';
-import '../widgets/mode_card.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../widgets/noth_card.dart';
+import '../widgets/noth_button.dart';
+import '../widgets/noth_panel.dart';
+import '../widgets/noth_list_tile.dart';
+import '../widgets/noth_toast.dart';
+import '../widgets/noth_bottom_sheet.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
+import 'permissions_screen.dart';
 
-/// Home screen showing all available modes
+/// Home screen showing all available modes with Nothing-style design
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -56,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _voiceService.onError = (error) {
       debugPrint('[HomeScreen] Voice error: $error');
       if (mounted) {
-        _showSnackBar('Voice error: $error');
+        NothToast.error(context, 'Voice error: $error');
       }
     };
   }
@@ -65,17 +75,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final command = _voiceService.parseCommand(text);
 
     if (!command.isValid) {
-      _showSnackBar('Command not recognized: "$text"');
+      NothToast.warning(context, 'Command not recognized: "$text"');
       return;
     }
 
     // Show what we're doing
     if (command.modeId != null) {
-      _showSnackBar(
+      NothToast.info(
+        context,
         '${command.isActivating ? "Activating" : "Deactivating"} ${command.modeId} mode...',
       );
     } else if (command.directAction != null) {
-      _showSnackBar('Executing: ${command.directAction!.type}...');
+      NothToast.info(context, 'Executing: ${command.directAction!.type}...');
     }
 
     // Execute the command
@@ -88,9 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (results.isNotEmpty && mounted) {
       final successCount = results.where((r) => r.success).length;
       if (successCount == results.length) {
-        _showSnackBar('Command completed successfully');
+        NothToast.success(context, 'Command completed successfully');
       } else {
-        _showSnackBar('Completed with ${results.length - successCount} errors');
+        NothToast.warning(
+          context,
+          'Completed with ${results.length - successCount} errors',
+        );
       }
     }
   }
@@ -108,14 +122,17 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!hasPermission) {
         final granted = await _voiceService.requestMicrophonePermission();
         if (!granted) {
-          _showSnackBar('Microphone permission required for voice commands');
+          NothToast.error(
+            context,
+            'Microphone permission required for voice commands',
+          );
           return;
         }
       }
 
       final started = await _voiceService.startListening();
       if (!started) {
-        _showSnackBar('Could not start voice recognition');
+        NothToast.error(context, 'Could not start voice recognition');
       }
     }
   }
@@ -166,12 +183,14 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       } else {
-        _showSnackBar(
+        NothToast.info(
+          context,
           'No flows set for turning ${isActivating ? "on" : "off"} ${mode.name}',
         );
       }
 
-      _showSnackBar(
+      NothToast.success(
+        context,
         isActivating
             ? '${mode.name} mode activated'
             : '${mode.name} mode deactivated',
@@ -180,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Reload modes to reflect changes
       await _loadModes();
     } catch (e) {
-      _showSnackBar('Error toggling mode: $e');
+      NothToast.error(context, 'Error toggling mode: $e');
     }
   }
 
@@ -203,146 +222,121 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final successCount = results.where((r) => r.success).length;
     final failureCount = results.length - successCount;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    NothBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final sheetColor = Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white;
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          decoration: BoxDecoration(
-            color: sheetColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(2),
+      title: '${mode.name} ${isActivating ? "ON" : "OFF"}',
+      subtitle: '$successCount/${results.length} actions completed',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Simulation mode notice
+          if (_isSimulation)
+            NothPanel(
+              padding: const EdgeInsets.all(12),
+              backgroundColor: NothFlowsColors.warning.withOpacity(0.1),
+              borderColor: NothFlowsColors.warning.withOpacity(0.3),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: isDark
+                        ? NothFlowsColors.textSecondary
+                        : NothFlowsColors.textSecondaryLight,
                   ),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      '${mode.name} ${isActivating ? "on" : "off"}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Simulation mode: actions are logged but device changes are not applied.',
+                      style: NothFlowsTypography.caption.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textSecondary
+                            : NothFlowsColors.textSecondaryLight,
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (failureCount > 0
-                                ? Colors.red
-                                : Colors.green)
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 16),
+
+          // Results list
+          ...results.asMap().entries.map((entry) {
+            final index = entry.key;
+            final result = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: result.success
+                          ? NothFlowsColors.success.withOpacity(0.15)
+                          : NothFlowsColors.error.withOpacity(0.15),
+                      borderRadius: NothFlowsShapes.borderRadiusSm,
+                    ),
+                    child: Center(
                       child: Text(
-                        '$successCount/${results.length} actions',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: failureCount > 0 ? Colors.red : Colors.green,
+                        '${index + 1}',
+                        style: NothFlowsTypography.labelSmall.copyWith(
+                          color: result.success
+                              ? NothFlowsColors.success
+                              : NothFlowsColors.error,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (_isSimulation)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    result.success ? Icons.check_circle : Icons.error,
+                    color: result.success
+                        ? NothFlowsColors.success
+                        : NothFlowsColors.error,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.info_outline, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Simulation mode: actions are logged but device changes are not applied.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.color
-                                  ?.withOpacity(0.7),
-                            ),
+                        Text(
+                          result.actionType,
+                          style: NothFlowsTypography.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? NothFlowsColors.textPrimary
+                                : NothFlowsColors.textPrimaryLight,
                           ),
                         ),
+                        if (result.message != null)
+                          Text(
+                            result.message!,
+                            style: NothFlowsTypography.caption.copyWith(
+                              color: isDark
+                                  ? NothFlowsColors.textSecondary
+                                  : NothFlowsColors.textSecondaryLight,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                SizedBox(
-                  height: (results.length * 68).clamp(180, 360).toDouble(),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: results.length,
-                    separatorBuilder: (_, __) => Divider(
-                      color: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.color
-                          ?.withOpacity(0.08),
-                    ),
-                    itemBuilder: (context, index) {
-                      final result = results[index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          result.success ? Icons.check_circle : Icons.error,
-                          color: result.success ? Colors.green : Colors.red,
-                        ),
-                        title: Text(
-                          result.actionType,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        subtitle: result.message != null
-                            ? Text(
-                                result.message!,
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.color
-                                      ?.withOpacity(0.7),
-                                ),
-                              )
-                            : null,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+      actions: [
+        NothButton.primary(
+          label: 'Done',
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
     );
   }
 
@@ -355,80 +349,219 @@ class _HomeScreenState extends State<HomeScreen> {
     ).then((_) => _loadModes());
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  void _showSettingsSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    NothBottomSheet.show(
+      context: context,
+      title: 'Settings',
+      showDivider: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Permissions
+          NothListTile.navigation(
+            title: 'Permissions',
+            subtitle: 'Manage app permissions',
+            leadingIcon: Icons.shield_outlined,
+            leadingIconColor: NothFlowsColors.info,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PermissionsScreen(),
+                ),
+              );
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // Voice Commands
+          NothListTile.navigation(
+            title: 'Voice Commands',
+            subtitle: 'Configure voice activation',
+            leadingIcon: Icons.mic_none,
+            leadingIconColor: NothFlowsColors.motorPurple,
+            onTap: () {
+              Navigator.pop(context);
+              NothToast.info(context, 'Voice settings coming soon');
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // Reset Data
+          NothListTile.destructive(
+            title: 'Reset Data',
+            subtitle: 'Clear all modes and flows',
+            leadingIcon: Icons.delete_outline,
+            onTap: () async {
+              Navigator.pop(context);
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Reset Data?'),
+                  content: const Text(
+                    'This will clear all modes and flows. This action cannot be undone.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(
+                        'Reset',
+                        style: TextStyle(color: NothFlowsColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true && mounted) {
+                await _storage.clearAll();
+                _loadModes();
+                NothToast.success(context, 'Data reset successfully');
+              }
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // App info
+          Text(
+            'NothFlows v1.0.0',
+            style: NothFlowsTypography.caption.copyWith(
+              color: isDark
+                  ? NothFlowsColors.textTertiary
+                  : NothFlowsColors.textTertiaryLight,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Made with care for accessibility',
+            style: NothFlowsTypography.caption.copyWith(
+              color: isDark
+                  ? NothFlowsColors.textDisabled
+                  : NothFlowsColors.textDisabledLight,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final scaffold = Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF5F5F5),
+      backgroundColor:
+          isDark ? NothFlowsColors.nothingBlack : NothFlowsColors.surfaceLight,
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: NothFlowsColors.nothingRed,
+                ),
+              )
             : RefreshIndicator(
                 onRefresh: _loadModes,
+                color: NothFlowsColors.nothingRed,
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                    // App bar
+                    // Header with logo
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                        child: Column(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                const Text(
-                                  'NothFlows',
-                                  style: TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -1.5,
-                                  ),
-                                ),
-                                if (_isSimulation) ...[
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.orange),
-                                    ),
-                                    child: const Text(
-                                      'SIMULATION',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange,
+                            // Logo and title
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      // Logo
+                                      SvgPicture.asset(
+                                        'assets/icons/nothflows_logo.svg',
+                                        width: 32,
+                                        height: 32,
+                                        colorFilter: ColorFilter.mode(
+                                          isDark
+                                              ? NothFlowsColors.nothingWhite
+                                              : NothFlowsColors.nothingBlack,
+                                          BlendMode.srcIn,
+                                        ),
                                       ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'NothFlows',
+                                        style: NothFlowsTypography.displaySmall
+                                            .copyWith(
+                                          color: isDark
+                                              ? NothFlowsColors.textPrimary
+                                              : NothFlowsColors.textPrimaryLight,
+                                        ),
+                                      ),
+                                      if (_isSimulation) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: NothFlowsColors.warning
+                                                .withOpacity(0.15),
+                                            borderRadius: NothFlowsShapes
+                                                .borderRadiusXs,
+                                            border: Border.all(
+                                              color: NothFlowsColors.warning,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'SIM',
+                                            style: NothFlowsTypography.labelSmall
+                                                .copyWith(
+                                              color: NothFlowsColors.warning,
+                                              fontSize: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Your Assistive Flows',
+                                    style:
+                                        NothFlowsTypography.bodyMedium.copyWith(
+                                      color: isDark
+                                          ? NothFlowsColors.textSecondary
+                                          : NothFlowsColors.textSecondaryLight,
                                     ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Your Assistive Automation Engine',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.color
-                                    ?.withOpacity(0.6),
-                                letterSpacing: 0,
+
+                            // Settings button
+                            IconButton(
+                              onPressed: _showSettingsSheet,
+                              icon: Icon(
+                                Icons.settings_outlined,
+                                color: isDark
+                                    ? NothFlowsColors.textSecondary
+                                    : NothFlowsColors.textSecondaryLight,
                               ),
                             ),
                           ],
@@ -444,8 +577,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           (context, index) {
                             final mode = _modes[index];
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: ModeCard(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: NothModeCard(
                                 mode: mode,
                                 onTap: () => _openModeDetail(mode),
                                 onToggle: () => _toggleMode(mode),
@@ -457,73 +590,118 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    // Bottom spacing
+                    // Bottom spacing for action bar
                     const SliverToBoxAdapter(
-                      child: SizedBox(height: 24),
+                      child: SizedBox(height: 100),
                     ),
                   ],
                 ),
               ),
       ),
 
-      // FAB buttons with voice command
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Voice command button
-          FloatingActionButton(
-            onPressed: _toggleVoiceListening,
-            backgroundColor: _isListening
-                ? Colors.red
-                : const Color(0xFF5B4DFF),
-            foregroundColor: Colors.white,
-            heroTag: 'voice_command',
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                _isListening ? Icons.stop : Icons.mic,
-                key: ValueKey(_isListening),
+      // Bottom action bar
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? NothFlowsColors.surfaceDark
+                : NothFlowsColors.surfaceLightAlt,
+            border: Border(
+              top: BorderSide(
+                color: isDark
+                    ? NothFlowsColors.borderDark
+                    : NothFlowsColors.borderLight,
+                width: 1,
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Daily Check-In button
-          FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DailyCheckInScreen(),
+          child: Row(
+            children: [
+              // Voice command button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _toggleVoiceListening,
+                  borderRadius: BorderRadius.circular(28),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: _isListening
+                          ? NothFlowsColors.error
+                          : NothFlowsColors.nothingRed,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _isListening ? Icons.stop : Icons.mic,
+                      color: NothFlowsColors.nothingWhite,
+                      size: 24,
+                    ),
+                  ),
                 ),
-              );
-            },
-            backgroundColor: const Color(0xFF5B4DFF),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.favorite_border),
-            label: const Text(
-              'Daily Check-In',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            heroTag: 'daily_checkin',
+              ),
+
+              const SizedBox(width: 12),
+
+              // Daily Check-In button
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DailyCheckInScreen(),
+                        ),
+                      );
+                    },
+                    borderRadius: NothFlowsShapes.borderRadiusFull,
+                    child: Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? NothFlowsColors.surfaceDarkAlt
+                            : NothFlowsColors.surfaceLight,
+                        borderRadius: NothFlowsShapes.borderRadiusFull,
+                        border: Border.all(
+                          color: isDark
+                              ? NothFlowsColors.borderDark
+                              : NothFlowsColors.borderLight,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_outline,
+                            color: NothFlowsColors.nothingRed,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Daily Check-In',
+                            style: NothFlowsTypography.buttonMedium.copyWith(
+                              color: isDark
+                                  ? NothFlowsColors.textPrimary
+                                  : NothFlowsColors.textPrimaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          // Settings button
-          FloatingActionButton(
-            onPressed: () => _showSettingsSheet(),
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.1)
-                : Colors.black.withOpacity(0.05),
-            heroTag: 'settings',
-            child: Icon(
-              Icons.settings,
-              color: Theme.of(context).iconTheme.color,
-            ),
-          ),
-        ],
+        ),
       ),
     );
 
-    // Wrap in Stack to show voice listening overlay
+    // Wrap in Stack for voice listening overlay
     return Stack(
       children: [
         scaffold,
@@ -533,14 +711,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: GestureDetector(
               onTap: _toggleVoiceListening,
               child: Container(
-                color: Colors.black.withOpacity(0.7),
+                color: NothFlowsColors.nothingBlack.withOpacity(0.85),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Animated microphone
                       TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 1.0, end: 1.3),
+                        tween: Tween(begin: 1.0, end: 1.2),
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeInOut,
                         builder: (context, scale, child) {
@@ -550,11 +728,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 100,
                               height: 100,
                               decoration: BoxDecoration(
-                                color: Colors.red,
+                                color: NothFlowsColors.nothingRed,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withOpacity(0.4),
+                                    color:
+                                        NothFlowsColors.nothingRed.withOpacity(0.4),
                                     blurRadius: 30,
                                     spreadRadius: 10,
                                   ),
@@ -562,14 +741,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: const Icon(
                                 Icons.mic,
-                                color: Colors.white,
+                                color: NothFlowsColors.nothingWhite,
                                 size: 48,
                               ),
                             ),
                           );
                         },
                         onEnd: () {
-                          // This creates the pulsing effect
                           if (mounted && _isListening) {
                             setState(() {});
                           }
@@ -579,12 +757,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 32),
 
                       // Listening text
-                      const Text(
+                      Text(
                         'Listening...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
+                        style: NothFlowsTypography.displaySmall.copyWith(
+                          color: NothFlowsColors.nothingWhite,
                         ),
                       ),
 
@@ -596,15 +772,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 32),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            color: NothFlowsColors.surfaceDark,
+                            borderRadius: NothFlowsShapes.borderRadiusMd,
+                            border: Border.all(
+                              color: NothFlowsColors.borderDark,
+                            ),
                           ),
                           child: Text(
                             '"$_recognizedText"',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
+                            style: NothFlowsTypography.bodyLarge.copyWith(
+                              color: NothFlowsColors.textPrimary,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -616,9 +794,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Say "Activate vision assist" or "Set brightness to 50"',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 14,
+                        style: NothFlowsTypography.bodyMedium.copyWith(
+                          color: NothFlowsColors.textSecondary,
                         ),
                       ),
 
@@ -627,9 +804,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Tap to cancel
                       Text(
                         'Tap anywhere to cancel',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
-                          fontSize: 12,
+                        style: NothFlowsTypography.caption.copyWith(
+                          color: NothFlowsColors.textTertiary,
                         ),
                       ),
                     ],
@@ -639,87 +815,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  void _showSettingsSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF1A1A1A)
-              : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'Settings',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.5,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Request permissions
-            ListTile(
-              leading: const Icon(Icons.security),
-              title: const Text('Request Permissions'),
-              subtitle: const Text('Grant necessary permissions'),
-              onTap: () async {
-                final results = await _executor.requestPermissions();
-                final granted = results.values.where((v) => v).length;
-                final total = results.length;
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _showSnackBar('Granted $granted/$total permissions');
-                }
-              },
-            ),
-
-            // Reset data
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text('Reset Data'),
-              subtitle: const Text('Clear all modes and flows'),
-              onTap: () async {
-                await _storage.clearAll();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _loadModes();
-                  _showSnackBar('Data reset successfully');
-                }
-              },
-            ),
-
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
     );
   }
 }

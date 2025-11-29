@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/automation_executor.dart';
-import '../widgets/glass_panel.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
+import '../widgets/noth_panel.dart';
+import '../widgets/noth_button.dart';
 
 /// Bottom sheet for showing execution results
 class ResultsSheet extends StatelessWidget {
@@ -13,35 +18,51 @@ class ResultsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final successCount = results.where((r) => r.success).length;
     final totalCount = results.length;
+    final allSuccess = successCount == totalCount;
+
+    final statusColor = allSuccess
+        ? NothFlowsColors.success
+        : NothFlowsColors.warning;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(NothFlowsSpacing.lg),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: isDark
+            ? NothFlowsColors.surfaceDark
+            : NothFlowsColors.surfaceLight,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? NothFlowsColors.borderDark
+                : NothFlowsColors.borderLight,
+            width: NothFlowsShapes.borderThin,
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.color
-                  ?.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(2),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? NothFlowsColors.borderDark
+                    : NothFlowsColors.borderLight,
+                borderRadius: NothFlowsShapes.borderRadiusFull,
+              ),
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Header
           Row(
@@ -50,44 +71,36 @@ class ResultsSheet extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: (successCount == totalCount
-                          ? const Color(0xFF4DFF88)
-                          : const Color(0xFFFFB84D))
-                      .withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: NothFlowsShapes.borderRadiusMd,
                 ),
                 child: Icon(
-                  successCount == totalCount
+                  allSuccess
                       ? Icons.check_circle_outline
                       : Icons.warning_amber_rounded,
-                  color: successCount == totalCount
-                      ? const Color(0xFF4DFF88)
-                      : const Color(0xFFFFB84D),
+                  color: statusColor,
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: NothFlowsSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Execution Results',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.5,
+                      style: NothFlowsTypography.headingLarge.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textPrimary
+                            : NothFlowsColors.textPrimaryLight,
                       ),
                     ),
                     Text(
                       '$successCount/$totalCount actions completed',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.color
-                            ?.withOpacity(0.6),
+                      style: NothFlowsTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textSecondary
+                            : NothFlowsColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -96,17 +109,20 @@ class ResultsSheet extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Results list
           ...results.asMap().entries.map((entry) {
             final index = entry.key;
             final result = entry.value;
+            final resultColor = result.success
+                ? NothFlowsColors.success
+                : NothFlowsColors.error;
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GlassPanel(
-                padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(bottom: NothFlowsSpacing.sm),
+              child: NothPanel(
+                padding: const EdgeInsets.all(NothFlowsSpacing.md),
                 child: Row(
                   children: [
                     // Step number
@@ -114,38 +130,30 @@ class ResultsSheet extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: (result.success
-                                ? const Color(0xFF4DFF88)
-                                : const Color(0xFFFF4D4D))
-                            .withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        color: resultColor.withOpacity(0.15),
+                        borderRadius: NothFlowsShapes.borderRadiusSm,
                       ),
                       child: Center(
                         child: Text(
                           '${index + 1}',
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: NothFlowsTypography.labelMedium.copyWith(
+                            color: resultColor,
                             fontWeight: FontWeight.w600,
-                            color: result.success
-                                ? const Color(0xFF4DFF88)
-                                : const Color(0xFFFF4D4D),
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: NothFlowsSpacing.sm),
 
                     // Status icon
                     Icon(
                       result.success ? Icons.check : Icons.close,
-                      color: result.success
-                          ? const Color(0xFF4DFF88)
-                          : const Color(0xFFFF4D4D),
+                      color: resultColor,
                       size: 20,
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: NothFlowsSpacing.sm),
 
                     // Result description
                     Expanded(
@@ -154,8 +162,10 @@ class ResultsSheet extends StatelessWidget {
                         children: [
                           Text(
                             _formatActionType(result.actionType),
-                            style: const TextStyle(
-                              fontSize: 15,
+                            style: NothFlowsTypography.bodyMedium.copyWith(
+                              color: isDark
+                                  ? NothFlowsColors.textPrimary
+                                  : NothFlowsColors.textPrimaryLight,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -163,13 +173,10 @@ class ResultsSheet extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               result.message!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.color
-                                    ?.withOpacity(0.6),
+                              style: NothFlowsTypography.bodySmall.copyWith(
+                                color: isDark
+                                    ? NothFlowsColors.textSecondary
+                                    : NothFlowsColors.textSecondaryLight,
                               ),
                             ),
                           ],
@@ -182,27 +189,14 @@ class ResultsSheet extends StatelessWidget {
             );
           }),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Close button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: NothButton.primary(
+              label: 'Done',
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: successCount == totalCount
-                    ? const Color(0xFF4DFF88)
-                    : const Color(0xFFFFB84D),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Done',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
             ),
           ),
 

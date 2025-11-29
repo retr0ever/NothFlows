@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/flow_dsl.dart';
-import 'glass_panel.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
+import 'noth_panel.dart';
 
 /// Tile widget for displaying a flow
 class FlowTile extends StatelessWidget {
@@ -17,9 +21,10 @@ class FlowTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return NothPanel(
+      padding: const EdgeInsets.all(NothFlowsSpacing.md),
       onTap: onTap,
       child: Row(
         children: [
@@ -29,7 +34,7 @@ class FlowTile extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: _getColorForAction(flow.actions.first.type).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: NothFlowsShapes.borderRadiusMd,
             ),
             child: Icon(
               _getIconForAction(flow.actions.first.type),
@@ -38,7 +43,7 @@ class FlowTile extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 12),
+          const SizedBox(width: NothFlowsSpacing.sm),
 
           // Flow info
           Expanded(
@@ -48,19 +53,21 @@ class FlowTile extends StatelessWidget {
                 // Action count
                 Text(
                   '${flow.actions.length} ${flow.actions.length == 1 ? 'action' : 'actions'}',
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: NothFlowsTypography.bodyMedium.copyWith(
+                    color: isDark
+                        ? NothFlowsColors.textPrimary
+                        : NothFlowsColors.textPrimaryLight,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 2),
                 // First action preview
                 Text(
                   _getActionPreview(flow.actions.first),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  style: NothFlowsTypography.bodySmall.copyWith(
+                    color: isDark
+                        ? NothFlowsColors.textSecondary
+                        : NothFlowsColors.textSecondaryLight,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -72,9 +79,19 @@ class FlowTile extends StatelessWidget {
           // Delete button
           if (onDelete != null)
             IconButton(
-              icon: const Icon(Icons.close, size: 20),
+              icon: Icon(
+                Icons.close,
+                size: 20,
+                color: isDark
+                    ? NothFlowsColors.textTertiary
+                    : NothFlowsColors.textTertiaryLight,
+              ),
               onPressed: onDelete,
-              color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.5),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 32,
+              ),
             ),
         ],
       ),
@@ -111,22 +128,22 @@ class FlowTile extends StatelessWidget {
     switch (actionType) {
       case 'clean_screenshots':
       case 'clean_downloads':
-        return const Color(0xFF4DFF88);
+        return NothFlowsColors.success;
       case 'mute_apps':
       case 'enable_dnd':
-        return const Color(0xFFFF4D4D);
+        return NothFlowsColors.nothingRed;
       case 'lower_brightness':
       case 'set_volume':
-        return const Color(0xFF5B4DFF);
+        return NothFlowsColors.visionBlue;
       case 'disable_wifi':
       case 'disable_bluetooth':
-        return const Color(0xFFFFB84D);
+        return NothFlowsColors.warning;
       case 'set_wallpaper':
-        return const Color(0xFFFF4D9F);
+        return NothFlowsColors.hearingPink;
       case 'launch_app':
-        return const Color(0xFF4DDDFF);
+        return NothFlowsColors.info;
       default:
-        return const Color(0xFF888888);
+        return NothFlowsColors.textSecondary;
     }
   }
 

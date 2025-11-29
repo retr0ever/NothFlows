@@ -3,12 +3,18 @@ import '../models/mode_model.dart';
 import '../models/flow_dsl.dart';
 import '../services/cactus_llm_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/glass_panel.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
+import '../widgets/noth_panel.dart';
+import '../widgets/noth_text_field.dart';
+import '../widgets/noth_chip.dart';
+import '../widgets/noth_toast.dart';
 import '../widgets/flow_tile.dart';
-import '../widgets/debug_banner.dart';
 import 'flow_preview_sheet.dart';
 
-/// Detail screen for managing flows in a mode
+/// Detail screen for managing flows in a mode with Nothing-style design
 class ModeDetailScreen extends StatefulWidget {
   final ModeModel mode;
 
@@ -28,13 +34,13 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
 
   late ModeModel _mode;
   bool _isProcessing = false;
-  bool _isInitialisingLLM = false;
+  bool _isInitializingLLM = false;
 
   @override
   void initState() {
     super.initState();
     _mode = widget.mode;
-    _initialiseLLM();
+    _initializeLLM();
   }
 
   @override
@@ -43,20 +49,20 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _initialiseLLM() async {
+  Future<void> _initializeLLM() async {
     if (_llmService.isReady) return;
 
-    setState(() => _isInitialisingLLM = true);
+    setState(() => _isInitializingLLM = true);
 
     try {
       await _llmService.initialise();
       if (mounted) {
-        setState(() => _isInitialisingLLM = false);
+        setState(() => _isInitializingLLM = false);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isInitialisingLLM = false);
-        _showSnackBar('Error initialising AI: $e');
+        setState(() => _isInitializingLLM = false);
+        NothToast.error(context, 'Error initializing AI: $e');
       }
     }
   }
@@ -78,12 +84,10 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
       debugPrint('[ModeDetail] Parse result: ${dsl?.toJson()}');
 
       if (dsl == null) {
-        final errorMsg = 'Could not parse instruction. Try rephrasing.\n\nInstruction: "$instruction"';
-        debugPrint('[ModeDetail] ERROR: $errorMsg');
-        _showSnackBar(errorMsg);
-        if (mounted) {
-          DebugSnackbar.showError(context, 'LLM parsing failed - check debug output');
-        }
+        NothToast.error(
+          context,
+          'Could not parse instruction. Try rephrasing.',
+        );
         setState(() => _isProcessing = false);
         return;
       }
@@ -108,19 +112,13 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
           }
 
           _inputController.clear();
-          _showSnackBar('Flow added successfully');
+          NothToast.success(context, 'Flow added successfully');
         }
       }
     } catch (e, stackTrace) {
       debugPrint('[ModeDetail] ERROR adding flow: $e');
       debugPrint('[ModeDetail] Stack trace: $stackTrace');
-      _showSnackBar('Error adding flow: $e');
-      if (mounted) {
-        DebugSnackbar.showError(
-          context,
-          'Exception: ${e.toString()}\n\nCheck console for stack trace',
-        );
-      }
+      NothToast.error(context, 'Error adding flow');
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -134,22 +132,12 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
     final updatedMode = await _storage.getMode(_mode.id);
     if (updatedMode != null && mounted) {
       setState(() => _mode = updatedMode);
-      _showSnackBar('Flow removed');
+      NothToast.info(context, 'Flow removed');
     }
   }
 
   void _addExampleFlow(String example) {
     _inputController.text = example;
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   String _buildConditionsText(FlowConditions conditions) {
@@ -178,25 +166,40 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = screenWidth < 400 ? 16.0 : 24.0;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF5F5F5),
+      backgroundColor:
+          isDark ? NothFlowsColors.nothingBlack : NothFlowsColors.surfaceLight,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                NothFlowsSpacing.md,
+                horizontalPadding,
+                NothFlowsSpacing.md,
+              ),
               child: Row(
                 children: [
                   // Back button
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: isDark
+                          ? NothFlowsColors.textPrimary
+                          : NothFlowsColors.textPrimaryLight,
+                    ),
                     onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
 
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
 
                   // Mode icon
                   Container(
@@ -204,7 +207,7 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                     height: 48,
                     decoration: BoxDecoration(
                       color: _mode.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: NothFlowsShapes.borderRadiusMd,
                     ),
                     child: Icon(
                       _mode.icon,
@@ -213,7 +216,7 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                     ),
                   ),
 
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
 
                   // Mode info
                   Expanded(
@@ -222,21 +225,18 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                       children: [
                         Text(
                           _mode.name,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.5,
+                          style: NothFlowsTypography.headingLarge.copyWith(
+                            color: isDark
+                                ? NothFlowsColors.textPrimary
+                                : NothFlowsColors.textPrimaryLight,
                           ),
                         ),
                         Text(
                           '${_mode.flows.length} ${_mode.flows.length == 1 ? 'flow' : 'flows'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.color
-                                ?.withOpacity(0.6),
+                          style: NothFlowsTypography.bodySmall.copyWith(
+                            color: isDark
+                                ? NothFlowsColors.textSecondary
+                                : NothFlowsColors.textSecondaryLight,
                           ),
                         ),
                       ],
@@ -249,169 +249,141 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
             // Content
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 children: [
                   // Add flow input
-                  GlassPanel(
+                  NothPanel(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Add a flow',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.3,
+                        Text(
+                          'Add a new flow',
+                          style: NothFlowsTypography.headingSmall.copyWith(
+                            color: isDark
+                                ? NothFlowsColors.textPrimary
+                                : NothFlowsColors.textPrimaryLight,
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: NothFlowsSpacing.sm),
 
                         // Input field
-                        TextField(
+                        NothTextField(
                           controller: _inputController,
-                          decoration: InputDecoration(
-                            hintText: 'Describe what you want to happen...',
-                            hintStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.color
-                                  ?.withOpacity(0.4),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium!
-                                    .color!
-                                    .withOpacity(0.2),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium!
-                                    .color!
-                                    .withOpacity(0.2),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: _mode.color,
-                                width: 2,
-                              ),
-                            ),
-                            suffixIcon: _isProcessing || _isInitialisingLLM
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  )
-                                : IconButton(
-                                    icon: const Icon(Icons.arrow_forward),
-                                    onPressed: () =>
-                                        _addFlow(_inputController.text),
-                                  ),
-                          ),
-                          onSubmitted: _addFlow,
-                          maxLines: null,
+                          hintText: 'Describe what should happen...',
+                          focusColor: _mode.color,
                           textInputAction: TextInputAction.done,
+                          onSubmitted: _addFlow,
+                          suffixIcon: _isProcessing || _isInitializingLLM
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: _mode.color,
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: Icon(
+                                    Icons.arrow_forward,
+                                    color: _mode.color,
+                                  ),
+                                  onPressed: () =>
+                                      _addFlow(_inputController.text),
+                                ),
                         ),
 
-                        if (_isInitialisingLLM) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Loading AI model... This may take a moment.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.color
-                                  ?.withOpacity(0.6),
-                            ),
+                        if (_isInitializingLLM) ...[
+                          const SizedBox(height: NothFlowsSpacing.sm),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_outlined,
+                                size: 14,
+                                color: isDark
+                                    ? NothFlowsColors.textTertiary
+                                    : NothFlowsColors.textTertiaryLight,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Loading AI model...',
+                                style: NothFlowsTypography.caption.copyWith(
+                                  color: isDark
+                                      ? NothFlowsColors.textTertiary
+                                      : NothFlowsColors.textTertiaryLight,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: NothFlowsSpacing.lg),
 
                   // Example flows
-                  const Text(
-                    'Examples',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.3,
+                  Text(
+                    'Try an example',
+                    style: NothFlowsTypography.labelMedium.copyWith(
+                      color: isDark
+                          ? NothFlowsColors.textSecondary
+                          : NothFlowsColors.textSecondaryLight,
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: NothFlowsSpacing.sm),
 
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: _mode.exampleFlows.map((example) {
-                      return InkWell(
+                      return NothChip(
+                        label: example,
                         onTap: () => _addExampleFlow(example),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.black.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium!
-                                  .color!
-                                  .withOpacity(0.1),
-                            ),
-                          ),
-                          child: Text(
-                            example,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                       );
                     }).toList(),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: NothFlowsSpacing.xl),
 
                   // Active flows
                   if (_mode.flows.isNotEmpty) ...[
-                    const Text(
-                      'Active flows',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.3,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Active flows',
+                          style: NothFlowsTypography.labelMedium.copyWith(
+                            color: isDark
+                                ? NothFlowsColors.textSecondary
+                                : NothFlowsColors.textSecondaryLight,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _mode.color.withOpacity(0.15),
+                            borderRadius: NothFlowsShapes.borderRadiusSm,
+                          ),
+                          child: Text(
+                            '${_mode.flows.length}',
+                            style: NothFlowsTypography.labelSmall.copyWith(
+                              color: _mode.color,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: NothFlowsSpacing.sm),
 
                     ..._mode.flows.map((flow) {
                       return Padding(
@@ -426,30 +398,31 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                                   context: context,
                                   backgroundColor: Colors.transparent,
                                   isScrollControlled: true,
-                                  builder: (context) =>
-                                      FlowPreviewSheet(flow: flow, isEditing: true),
+                                  builder: (context) => FlowPreviewSheet(
+                                    flow: flow,
+                                    isEditing: true,
+                                  ),
                                 );
                               },
                               onDelete: () => _deleteFlow(flow.id!),
                             ),
                             // Show conditions if present
-                            if (flow.conditions != null && !flow.conditions!.isEmpty) ...[
+                            if (flow.conditions != null &&
+                                !flow.conditions!.isEmpty) ...[
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.03),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: _mode.color.withOpacity(0.05),
+                                  borderRadius: NothFlowsShapes.borderRadiusSm,
                                   border: Border.all(
-                                    color: _mode.color.withOpacity(0.3),
+                                    color: _mode.color.withOpacity(0.2),
                                   ),
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.sensors,
+                                      Icons.sensors_outlined,
                                       size: 16,
                                       color: _mode.color,
                                     ),
@@ -457,13 +430,11 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                                     Expanded(
                                       child: Text(
                                         _buildConditionsText(flow.conditions!),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.color
-                                              ?.withOpacity(0.8),
+                                        style:
+                                            NothFlowsTypography.caption.copyWith(
+                                          color: isDark
+                                              ? NothFlowsColors.textSecondary
+                                              : NothFlowsColors.textSecondaryLight,
                                         ),
                                       ),
                                     ),
@@ -477,7 +448,43 @@ class _ModeDetailScreenState extends State<ModeDetailScreen> {
                     }),
                   ],
 
-                  const SizedBox(height: 24),
+                  // Empty state
+                  if (_mode.flows.isEmpty) ...[
+                    const SizedBox(height: NothFlowsSpacing.xl),
+                    Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_outlined,
+                            size: 48,
+                            color: isDark
+                                ? NothFlowsColors.textDisabled
+                                : NothFlowsColors.textDisabledLight,
+                          ),
+                          const SizedBox(height: NothFlowsSpacing.md),
+                          Text(
+                            'No flows yet',
+                            style: NothFlowsTypography.headingSmall.copyWith(
+                              color: isDark
+                                  ? NothFlowsColors.textSecondary
+                                  : NothFlowsColors.textSecondaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: NothFlowsSpacing.xs),
+                          Text(
+                            'Add a flow above to get started',
+                            style: NothFlowsTypography.bodySmall.copyWith(
+                              color: isDark
+                                  ? NothFlowsColors.textTertiary
+                                  : NothFlowsColors.textTertiaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: NothFlowsSpacing.xxl),
                 ],
               ),
             ),

@@ -85,7 +85,7 @@ String inferDisabilityContext(String request)
 **File**: `lib/screens/home_screen.dart` (MODIFIED)
 
 **Changes**:
-1. Changed subtitle from "Smart modes for your Nothing Phone" to **"Your Assistive Automation Engine"**
+1. Changed subtitle from "Smart modes for your Nothing Phone" to **"NothFlows — Personal Automation Engine"**
 2. Added Daily Check-In FloatingActionButton.extended with:
    - Purple (#5B4DFF) background
    - Heart icon

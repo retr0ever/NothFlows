@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
 
 /// Debug banner widget for displaying errors and warnings during testing
 class DebugBanner extends StatelessWidget {
@@ -21,14 +25,23 @@ class DebugBanner extends StatelessWidget {
     if (message == null) return const SizedBox.shrink();
 
     final color = error != null
-        ? Colors.red
+        ? NothFlowsColors.error
         : warning != null
-            ? Colors.orange
-            : Colors.blue;
+            ? NothFlowsColors.warning
+            : NothFlowsColors.info;
+
+    final icon = error != null
+        ? Icons.error_outline
+        : warning != null
+            ? Icons.warning_amber_outlined
+            : Icons.info_outline;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: NothFlowsSpacing.md,
+        vertical: NothFlowsSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         border: Border(
@@ -41,21 +54,16 @@ class DebugBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            error != null
-                ? Icons.error_outline
-                : warning != null
-                    ? Icons.warning_amber_outlined
-                    : Icons.info_outline,
+            icon,
             color: color,
             size: 20,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: NothFlowsSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
+              style: NothFlowsTypography.bodySmall.copyWith(
                 color: color,
-                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -97,42 +105,53 @@ class DebugErrorOverlay extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxHeight: 200),
           decoration: BoxDecoration(
-            color: Colors.red.shade50,
+            color: NothFlowsColors.error.withOpacity(0.05),
             border: Border(
-              top: BorderSide(color: Colors.red, width: 2),
+              top: BorderSide(
+                color: NothFlowsColors.error,
+                width: 2,
+              ),
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.red.shade100,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: NothFlowsSpacing.md,
+                  vertical: NothFlowsSpacing.xs,
+                ),
+                color: NothFlowsColors.error.withOpacity(0.1),
                 child: Row(
                   children: [
-                    const Icon(Icons.bug_report, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
+                    Icon(
+                      Icons.bug_report,
+                      color: NothFlowsColors.error,
+                      size: 20,
+                    ),
+                    const SizedBox(width: NothFlowsSpacing.xs),
+                    Text(
                       'Debug Errors',
-                      style: TextStyle(
-                        color: Colors.red,
+                      style: NothFlowsTypography.labelMedium.copyWith(
+                        color: NothFlowsColors.error,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '${errors.length} error${errors.length > 1 ? 's' : ''}',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 12,
+                      style: NothFlowsTypography.caption.copyWith(
+                        color: NothFlowsColors.error.withOpacity(0.8),
                       ),
                     ),
                     if (onClear != null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: NothFlowsSpacing.xs),
                       IconButton(
-                        icon: const Icon(Icons.clear_all, size: 18),
-                        color: Colors.red,
+                        icon: Icon(
+                          Icons.clear_all,
+                          size: 18,
+                          color: NothFlowsColors.error,
+                        ),
                         onPressed: onClear,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -143,34 +162,36 @@ class DebugErrorOverlay extends StatelessWidget {
               ),
               Flexible(
                 child: ListView.separated(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(NothFlowsSpacing.xs),
                   shrinkWrap: true,
                   itemCount: errors.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: NothFlowsColors.error.withOpacity(0.2),
+                  ),
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
+                        horizontal: NothFlowsSpacing.xs,
+                        vertical: NothFlowsSpacing.xxs,
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${index + 1}.',
-                            style: TextStyle(
-                              color: Colors.red.shade700,
-                              fontSize: 12,
+                            style: NothFlowsTypography.caption.copyWith(
+                              color: NothFlowsColors.error,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: NothFlowsSpacing.xs),
                           Expanded(
                             child: Text(
                               errors[index],
-                              style: const TextStyle(
-                                fontSize: 12,
+                              style: NothFlowsTypography.caption.copyWith(
                                 fontFamily: 'monospace',
+                                color: NothFlowsColors.textPrimary,
                               ),
                             ),
                           ),
@@ -188,23 +209,35 @@ class DebugErrorOverlay extends StatelessWidget {
   }
 }
 
-/// Snackbar helper for showing errors
+/// Snackbar helper for showing errors - uses NothToast pattern
 class DebugSnackbar {
   static void showError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Icon(Icons.error_outline, color: NothFlowsColors.nothingWhite),
+            const SizedBox(width: NothFlowsSpacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: NothFlowsTypography.bodySmall.copyWith(
+                  color: NothFlowsColors.nothingWhite,
+                ),
+              ),
+            ),
           ],
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: NothFlowsColors.error,
         duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: NothFlowsShapes.borderRadiusMd,
+        ),
+        margin: const EdgeInsets.all(NothFlowsSpacing.md),
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: Colors.white,
+          textColor: NothFlowsColors.nothingWhite,
           onPressed: () {},
         ),
       ),
@@ -216,13 +249,25 @@ class DebugSnackbar {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.warning_amber_outlined, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Icon(Icons.warning_amber_outlined, color: NothFlowsColors.nothingBlack),
+            const SizedBox(width: NothFlowsSpacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: NothFlowsTypography.bodySmall.copyWith(
+                  color: NothFlowsColors.nothingBlack,
+                ),
+              ),
+            ),
           ],
         ),
-        backgroundColor: Colors.orange,
+        backgroundColor: NothFlowsColors.warning,
         duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: NothFlowsShapes.borderRadiusMd,
+        ),
+        margin: const EdgeInsets.all(NothFlowsSpacing.md),
       ),
     );
   }
@@ -232,13 +277,25 @@ class DebugSnackbar {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.info_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Icon(Icons.info_outline, color: NothFlowsColors.nothingWhite),
+            const SizedBox(width: NothFlowsSpacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: NothFlowsTypography.bodySmall.copyWith(
+                  color: NothFlowsColors.nothingWhite,
+                ),
+              ),
+            ),
           ],
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: NothFlowsColors.info,
         duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: NothFlowsShapes.borderRadiusMd,
+        ),
+        margin: const EdgeInsets.all(NothFlowsSpacing.md),
       ),
     );
   }

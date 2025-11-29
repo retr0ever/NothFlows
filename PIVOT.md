@@ -1,4 +1,4 @@
-# NothFlows ’ Assistive Automation Engine
+# NothFlows ï¿½ Assistive Automation Engine
 ## Complete Accessibility-First Refactor with Full Cactus Dependency
 
 **Date Started**: 28 November 2025
@@ -6,7 +6,7 @@
 
 ---
 
-## <¯ Vision
+## <ï¿½ Vision
 
 **NothFlows: Assistive Automation Engine**
 
@@ -130,7 +130,7 @@ class FlowDSL {
 
 ---
 
-## =§ IN PROGRESS
+## =ï¿½ IN PROGRESS
 
 ### Task 2 Completion: Add Accessibility Action Descriptions
 
@@ -142,9 +142,9 @@ class FlowDSL {
 
 ---
 
-## =Ë REMAINING TASKS
+## =ï¿½ REMAINING TASKS
 
-### 3. ó Add Accessibility Action Primitives to AutomationExecutor
+### 3. ï¿½ Add Accessibility Action Primitives to AutomationExecutor
 
 **File**: `lib/services/automation_executor.dart`
 
@@ -193,12 +193,12 @@ Future<ExecutionResult> _launchCareApp(Map<String, dynamic> params)
 
 ---
 
-### 4. ó Upgrade CactusLLM to Multi-Step Planner
+### 4. ï¿½ Upgrade CactusLLM to Multi-Step Planner
 
 **File**: `lib/services/cactus_llm_service.dart`
 
 **Current State**:
-- Parses natural language ’ single-action DSL
+- Parses natural language ï¿½ single-action DSL
 - Falls back to simulation mode if LLM fails
 - Simple system prompt
 
@@ -280,7 +280,7 @@ String inferDisabilityContext(String request);
 
 ---
 
-### 5. ó Add Screenshot ’ Flow via SmolVLM
+### 5. ï¿½ Add Screenshot ï¿½ Flow via SmolVLM
 
 **New File**: `lib/services/screenshot_parser_service.dart`
 
@@ -354,7 +354,7 @@ Only output JSON.''',
 
 ---
 
-### 6. ó Implement Local Personalization via CactusRAG
+### 6. ï¿½ Implement Local Personalization via CactusRAG
 
 **New File**: `lib/services/personalization_service.dart`
 
@@ -446,7 +446,7 @@ class PersonalizationService {
 
 ---
 
-### 7. ó Add Daily Check-In Flow
+### 7. ï¿½ Add Daily Check-In Flow
 
 **New File**: `lib/screens/daily_checkin_screen.dart`
 
@@ -559,7 +559,7 @@ Future<CheckInAnalysis> analyzeCheckIn(String response) async {
 
 ---
 
-### 8. ó Add Sensor-Aware Triggers
+### 8. ï¿½ Add Sensor-Aware Triggers
 
 **New File**: `lib/services/sensor_service.dart`
 
@@ -651,7 +651,7 @@ dependencies:
 
 ---
 
-### 9. ó Update UI for Accessibility Purpose
+### 9. ï¿½ Update UI for Accessibility Purpose
 
 **Files to Update**:
 - `lib/screens/home_screen.dart`
@@ -662,14 +662,14 @@ dependencies:
 **Changes Needed**:
 
 **Home Screen** (`home_screen.dart`):
-- Update header text: "Smart modes for Nothing Phones" ’ "Your assistive automation engine"
+- Update header text: "Smart modes for Nothing Phones" â†’ "NothFlows â€” Personal Automation Engine"
 - Add "Daily Check-In" button
 - Add "Create from Screenshot" action
 - Update mode card styling for accessibility categories
 
 **Mode Detail Screen** (`mode_detail_screen.dart`):
 - Add accessibility icon badges
-- Update copy: "Add a flow" ’ "Add an assistive routine"
+- Update copy: "Add a flow" ï¿½ "Add an assistive routine"
 - Show sensor conditions if present
 - Add visual indicators for condition-based flows
 
@@ -679,7 +679,7 @@ dependencies:
 - Update copy to emphasize privacy and on-device processing
 
 **Main App** (`main.dart`):
-- Update splash screen tagline: "Smart modes for Nothing Phones" ’ "Help your phone help you"
+- Update splash screen tagline: "Smart modes for Nothing Phones" ï¿½ "Help your phone help you"
 - Add accessibility disclaimer/introduction
 
 **Onboarding Flow** (new):
@@ -689,7 +689,7 @@ dependencies:
 
 ---
 
-### 10. ó Remove Simulation Mode Fallback
+### 10. ï¿½ Remove Simulation Mode Fallback
 
 **File**: `lib/services/cactus_llm_service.dart`
 
@@ -746,20 +746,20 @@ Future<ExecutionResult> _executeAction(FlowAction action) async {
 
 ---
 
-## =Ê Progress Summary
+## =ï¿½ Progress Summary
 
 | Task | Status | Files Modified | Lines Changed | Complexity |
 |------|--------|----------------|---------------|------------|
 | 1. Assistive Modes |  Complete | 1 | ~100 | Low |
 | 2. DSL Schema |  Complete | 1 | ~150 | Medium |
-| 3. Accessibility Actions | ó Pending | 2 | ~500 | High |
-| 4. CactusLLM Planner | ó Pending | 1 | ~300 | High |
-| 5. SmolVLM Screenshot Parser | ó Pending | 1 (new) | ~150 | Medium |
-| 6. CactusRAG Personalization | ó Pending | 1 (new) | ~200 | Medium |
-| 7. Daily Check-In | ó Pending | 1 (new) | ~150 | Low |
-| 8. Sensor Triggers | ó Pending | 1 (new) | ~200 | Medium |
-| 9. UI Updates | ó Pending | 4 | ~300 | Medium |
-| 10. Remove Simulation | ó Pending | 2 | ~50 | Low |
+| 3. Accessibility Actions | ï¿½ Pending | 2 | ~500 | High |
+| 4. CactusLLM Planner | ï¿½ Pending | 1 | ~300 | High |
+| 5. SmolVLM Screenshot Parser | ï¿½ Pending | 1 (new) | ~150 | Medium |
+| 6. CactusRAG Personalization | ï¿½ Pending | 1 (new) | ~200 | Medium |
+| 7. Daily Check-In | ï¿½ Pending | 1 (new) | ~150 | Low |
+| 8. Sensor Triggers | ï¿½ Pending | 1 (new) | ~200 | Medium |
+| 9. UI Updates | ï¿½ Pending | 4 | ~300 | Medium |
+| 10. Remove Simulation | ï¿½ Pending | 2 | ~50 | Low |
 
 **Total Estimated Changes**: ~2,000 lines across 10 files (6 new files)
 
@@ -785,7 +785,7 @@ dependencies:
 
 ---
 
-## <¨ Design System Updates
+## <ï¿½ Design System Updates
 
 **Colour Palette** (Nothing OS inspired):
 - Vision Assist: `#4D9FFF` (Blue)
@@ -810,7 +810,7 @@ dependencies:
 
 ---
 
-## >ê Testing Strategy
+## >ï¿½ Testing Strategy
 
 **Unit Tests Needed**:
 - FlowConditions parsing and validation
@@ -820,8 +820,8 @@ dependencies:
 
 **Integration Tests**:
 - End-to-end flow creation from screenshot
-- Daily check-in ’ mode activation
-- Sensor trigger ’ automatic flow execution
+- Daily check-in ï¿½ mode activation
+- Sensor trigger ï¿½ automatic flow execution
 - CactusLLM multi-step planning
 
 **Manual Testing**:
@@ -833,7 +833,7 @@ dependencies:
 
 ---
 
-## =Ý Documentation Updates Needed
+## =ï¿½ Documentation Updates Needed
 
 - Update README.md with accessibility focus
 - Add ACCESSIBILITY.md guide
@@ -843,7 +843,7 @@ dependencies:
 
 ---
 
-## =€ Deployment Checklist
+## =ï¿½ Deployment Checklist
 
 - [ ] Complete all 10 tasks
 - [ ] Test on Nothing Phone with all assistive modes
@@ -858,7 +858,7 @@ dependencies:
 
 ---
 
-## =Ì Key Principles
+## =ï¿½ Key Principles
 
 1. **Privacy First**: All AI runs on-device, no cloud
 2. **Cactus Required**: No simulation fallback for core features

@@ -1411,7 +1411,7 @@ Future<List<ExecutionResult>> executeFlow(FlowDSL flow) async {
 ```dart
 // Update app title
 AppBar(
-  title: const Text('Your Assistive Automation Engine'),  // Changed from "NothFlows"
+  title: const Text('NothFlows — Personal Automation Engine'),  // Changed from "NothFlows"
 )
 
 // Add Daily Check-In button

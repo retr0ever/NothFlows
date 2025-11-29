@@ -1,8 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../main.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_shapes.dart';
 
 /// Glassmorphic panel widget adjusted for NothingOS aesthetic
+/// @deprecated Use NothPanel instead for new code
 class GlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -19,7 +20,7 @@ class GlassPanel extends StatelessWidget {
     this.padding,
     this.borderRadius = 24,
     this.color,
-    this.blur = 0, // Reduced blur for Nothing aesthetic
+    this.blur = 0,
     this.border,
     this.onTap,
     this.elevation = 0,
@@ -29,24 +30,23 @@ class GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Nothing style: Solid backgrounds or very subtle tints
+    // Use new theme colors
     final baseColor = color ??
         (isDark
-            ? NothFlowsApp.nothingDarkGrey
-            : NothFlowsApp.nothingWhite);
+            ? NothFlowsColors.surfaceDark
+            : NothFlowsColors.surfaceLight);
 
     Widget content = Container(
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: baseColor,
         borderRadius: BorderRadius.circular(borderRadius),
-        // Nothing style: High contrast borders
         border: border ??
             Border.all(
               color: isDark
-                  ? Colors.white.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.1),
-              width: 1,
+                  ? NothFlowsColors.borderDark
+                  : NothFlowsColors.borderLight,
+              width: NothFlowsShapes.borderThin,
             ),
         boxShadow: elevation > 0
             ? [

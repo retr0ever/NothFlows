@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/mode_model.dart';
-import '../main.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_typography.dart';
 
 /// Card displaying a mode summary (NothingOS style)
+/// @deprecated Use NothModeCard instead for new code
 class ModeCard extends StatelessWidget {
   final ModeModel mode;
   final VoidCallback onTap;
@@ -22,18 +25,24 @@ class ModeCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: NothFlowsShapes.borderRadiusXl,
       child: Container(
         height: 160,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark ? NothFlowsApp.nothingDarkGrey : NothFlowsApp.nothingWhite,
-          borderRadius: BorderRadius.circular(30),
+          color: isDark
+              ? NothFlowsColors.surfaceDark
+              : NothFlowsColors.surfaceLight,
+          borderRadius: NothFlowsShapes.borderRadiusXl,
           border: Border.all(
             color: mode.isActive
-                ? NothFlowsApp.nothingRed
-                : (isDark ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.1)),
-            width: mode.isActive ? 2 : 1,
+                ? NothFlowsColors.nothingRed
+                : (isDark
+                    ? NothFlowsColors.borderDark
+                    : NothFlowsColors.borderLight),
+            width: mode.isActive
+                ? NothFlowsShapes.borderThick
+                : NothFlowsShapes.borderThin,
           ),
         ),
         child: Column(
@@ -46,15 +55,19 @@ class ModeCard extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: mode.isActive
-                        ? NothFlowsApp.nothingRed.withOpacity(0.1)
-                        : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
-                    borderRadius: BorderRadius.circular(16),
+                        ? NothFlowsColors.nothingRed.withOpacity(0.1)
+                        : (isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.05)),
+                    borderRadius: NothFlowsShapes.borderRadiusMd,
                   ),
                   child: Icon(
                     mode.icon,
                     color: mode.isActive
-                        ? NothFlowsApp.nothingRed
-                        : (isDark ? Colors.white : Colors.black),
+                        ? NothFlowsColors.nothingRed
+                        : (isDark
+                            ? NothFlowsColors.textPrimary
+                            : NothFlowsColors.textPrimaryLight),
                     size: 24,
                   ),
                 ),
@@ -65,15 +78,13 @@ class ModeCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: mode.color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: NothFlowsShapes.borderRadiusSm,
                   ),
                   child: Text(
                     mode.category.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                    style: NothFlowsTypography.labelSmall.copyWith(
                       color: mode.color,
-                      letterSpacing: 0.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -89,9 +100,11 @@ class ModeCard extends StatelessWidget {
                     height: 32,
                     decoration: BoxDecoration(
                       color: mode.isActive
-                          ? NothFlowsApp.nothingRed
-                          : (isDark ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.1)),
-                      borderRadius: BorderRadius.circular(16),
+                          ? NothFlowsColors.nothingRed
+                          : (isDark
+                              ? NothFlowsColors.borderDark
+                              : NothFlowsColors.borderLight),
+                      borderRadius: NothFlowsShapes.borderRadiusFull,
                     ),
                     child: Stack(
                       children: [
@@ -105,7 +118,9 @@ class ModeCard extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.black : Colors.white,
+                              color: isDark
+                                  ? NothFlowsColors.nothingBlack
+                                  : NothFlowsColors.nothingWhite,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -116,30 +131,28 @@ class ModeCard extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const Spacer(),
-            
+
             // Mode Name
             Text(
               mode.name.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.5,
-                fontFamily: 'Roboto Mono',
+              style: NothFlowsTypography.modeName.copyWith(
+                color: isDark
+                    ? NothFlowsColors.textPrimary
+                    : NothFlowsColors.textPrimaryLight,
               ),
             ),
-            
+
             const SizedBox(height: 4),
-            
+
             // Flow Count
             Text(
               '$flows ${flows == 1 ? 'AUTOMATION' : 'AUTOMATIONS'}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.0,
-                color: (isDark ? Colors.white : Colors.black).withOpacity(0.6),
+              style: NothFlowsTypography.labelMedium.copyWith(
+                color: isDark
+                    ? NothFlowsColors.textTertiary
+                    : NothFlowsColors.textTertiaryLight,
               ),
             ),
           ],

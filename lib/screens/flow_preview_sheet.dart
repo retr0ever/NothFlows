@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/flow_dsl.dart';
-import '../widgets/glass_panel.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
+import '../widgets/noth_panel.dart';
+import '../widgets/noth_button.dart';
 
 /// Bottom sheet for previewing a flow before adding it
 class FlowPreviewSheet extends StatelessWidget {
@@ -15,13 +20,25 @@ class FlowPreviewSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(NothFlowsSpacing.lg),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: isDark
+            ? NothFlowsColors.surfaceDark
+            : NothFlowsColors.surfaceLight,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? NothFlowsColors.borderDark
+                : NothFlowsColors.borderLight,
+            width: NothFlowsShapes.borderThin,
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -33,17 +50,15 @@ class FlowPreviewSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(2),
+                color: isDark
+                    ? NothFlowsColors.borderDark
+                    : NothFlowsColors.borderLight,
+                borderRadius: NothFlowsShapes.borderRadiusFull,
               ),
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Header
           Row(
@@ -53,7 +68,7 @@ class FlowPreviewSheet extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: _getTriggerColor(flow.trigger).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: NothFlowsShapes.borderRadiusMd,
                 ),
                 child: Icon(
                   Icons.auto_awesome,
@@ -61,28 +76,25 @@ class FlowPreviewSheet extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: NothFlowsSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       isEditing ? 'Flow Details' : 'Preview Flow',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.5,
+                      style: NothFlowsTypography.headingLarge.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textPrimary
+                            : NothFlowsColors.textPrimaryLight,
                       ),
                     ),
                     Text(
                       '${flow.actions.length} ${flow.actions.length == 1 ? 'action' : 'actions'}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.color
-                            ?.withOpacity(0.6),
+                      style: NothFlowsTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textSecondary
+                            : NothFlowsColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -91,11 +103,11 @@ class FlowPreviewSheet extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Trigger
-          GlassPanel(
-            padding: const EdgeInsets.all(16),
+          NothPanel(
+            padding: const EdgeInsets.all(NothFlowsSpacing.md),
             child: Row(
               children: [
                 Icon(
@@ -103,28 +115,26 @@ class FlowPreviewSheet extends StatelessWidget {
                   color: _getTriggerColor(flow.trigger),
                   size: 24,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: NothFlowsSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Trigger',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.color
-                              ?.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
+                        'TRIGGER',
+                        style: NothFlowsTypography.labelSmall.copyWith(
+                          color: isDark
+                              ? NothFlowsColors.textTertiary
+                              : NothFlowsColors.textTertiaryLight,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _formatTrigger(flow.trigger),
-                        style: const TextStyle(
-                          fontSize: 15,
+                        style: NothFlowsTypography.bodyMedium.copyWith(
+                          color: isDark
+                              ? NothFlowsColors.textPrimary
+                              : NothFlowsColors.textPrimaryLight,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -135,24 +145,19 @@ class FlowPreviewSheet extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: NothFlowsSpacing.md),
 
           // Actions header
           Text(
-            'Actions',
-            style: TextStyle(
-              fontSize: 13,
-              color: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.color
-                  ?.withOpacity(0.6),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+            'ACTIONS',
+            style: NothFlowsTypography.labelSmall.copyWith(
+              color: isDark
+                  ? NothFlowsColors.textTertiary
+                  : NothFlowsColors.textTertiaryLight,
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: NothFlowsSpacing.sm),
 
           // Actions list
           ...flow.actions.asMap().entries.map((entry) {
@@ -160,9 +165,9 @@ class FlowPreviewSheet extends StatelessWidget {
             final action = entry.value;
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GlassPanel(
-                padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(bottom: NothFlowsSpacing.sm),
+              child: NothPanel(
+                padding: const EdgeInsets.all(NothFlowsSpacing.md),
                 child: Row(
                   children: [
                     // Step number
@@ -171,21 +176,20 @@ class FlowPreviewSheet extends StatelessWidget {
                       height: 32,
                       decoration: BoxDecoration(
                         color: _getActionColor(action.type).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: NothFlowsShapes.borderRadiusSm,
                       ),
                       child: Center(
                         child: Text(
                           '${index + 1}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          style: NothFlowsTypography.labelMedium.copyWith(
                             color: _getActionColor(action.type),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: NothFlowsSpacing.sm),
 
                     // Action icon
                     Icon(
@@ -194,14 +198,16 @@ class FlowPreviewSheet extends StatelessWidget {
                       size: 20,
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: NothFlowsSpacing.sm),
 
                     // Action description
                     Expanded(
                       child: Text(
                         _getActionDescription(action),
-                        style: const TextStyle(
-                          fontSize: 15,
+                        style: NothFlowsTypography.bodyMedium.copyWith(
+                          color: isDark
+                              ? NothFlowsColors.textPrimary
+                              : NothFlowsColors.textPrimaryLight,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -212,41 +218,24 @@ class FlowPreviewSheet extends StatelessWidget {
             );
           }),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: NothFlowsSpacing.lg),
 
           // Buttons
           if (!isEditing)
             Row(
               children: [
                 Expanded(
-                  child: TextButton(
+                  child: NothButton.secondary(
+                    label: 'Cancel',
                     onPressed: () => Navigator.pop(context, false),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Cancel'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: NothFlowsSpacing.sm),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton(
+                  child: NothButton.primary(
+                    label: 'Add Flow',
                     onPressed: () => Navigator.pop(context, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getTriggerColor(flow.trigger),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Flow',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
                   ),
                 ),
               ],
@@ -268,16 +257,7 @@ class FlowPreviewSheet extends StatelessWidget {
 
   Color _getTriggerColor(String trigger) {
     final mode = trigger.split(':').last;
-    switch (mode) {
-      case 'sleep':
-        return const Color(0xFF5B4DFF);
-      case 'focus':
-        return const Color(0xFFFF4D4D);
-      case 'custom':
-        return const Color(0xFF4DFF88);
-      default:
-        return const Color(0xFF888888);
-    }
+    return NothFlowsColors.getCategoryColor(mode);
   }
 
   IconData _getActionIcon(String actionType) {
@@ -310,22 +290,22 @@ class FlowPreviewSheet extends StatelessWidget {
     switch (actionType) {
       case 'clean_screenshots':
       case 'clean_downloads':
-        return const Color(0xFF4DFF88);
+        return NothFlowsColors.success;
       case 'mute_apps':
       case 'enable_dnd':
-        return const Color(0xFFFF4D4D);
+        return NothFlowsColors.nothingRed;
       case 'lower_brightness':
       case 'set_volume':
-        return const Color(0xFF5B4DFF);
+        return NothFlowsColors.visionBlue;
       case 'disable_wifi':
       case 'disable_bluetooth':
-        return const Color(0xFFFFB84D);
+        return NothFlowsColors.warning;
       case 'set_wallpaper':
-        return const Color(0xFFFF4D9F);
+        return NothFlowsColors.hearingPink;
       case 'launch_app':
-        return const Color(0xFF4DDDFF);
+        return NothFlowsColors.info;
       default:
-        return const Color(0xFF888888);
+        return NothFlowsColors.textSecondary;
     }
   }
 

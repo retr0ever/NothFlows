@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/permission_service.dart';
-import '../widgets/debug_banner.dart';
+import '../theme/nothflows_colors.dart';
+import '../theme/nothflows_typography.dart';
+import '../theme/nothflows_shapes.dart';
+import '../theme/nothflows_spacing.dart';
+import '../widgets/noth_button.dart';
+import '../widgets/noth_panel.dart';
 import 'home_screen.dart';
 
-/// Screen for requesting all necessary permissions
+/// Screen for requesting all necessary permissions with Nothing-style design
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
 
@@ -50,13 +55,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
       // Check if any critical permissions were denied
       final deniedPermissions = results.entries
-          .where((entry) => !entry.value.isGranted)
+          .where((entry) => entry.value != PermissionStatus.granted)
           .map((entry) => entry.key.toString())
           .toList();
 
       if (deniedPermissions.isNotEmpty) {
         setState(() {
-          _error = 'Some permissions were denied: ${deniedPermissions.join(', ')}';
+          _error =
+              'Some permissions were denied. You can grant them later in settings.';
         });
       }
 
@@ -85,23 +91,39 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Future<void> _skipPermissions() async {
-    // Show warning
     final proceed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Skip Permissions?'),
-        content: const Text(
-          'Some features may not work without the required permissions. '
-          'You can grant them later in the app settings.',
+        backgroundColor: NothFlowsColors.surfaceDarkAlt,
+        shape: RoundedRectangleBorder(
+          borderRadius: NothFlowsShapes.borderRadiusXl,
+        ),
+        title: Text(
+          'Skip Permissions?',
+          style: NothFlowsTypography.headingMedium.copyWith(
+            color: NothFlowsColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'Some features may not work without the required permissions. You can grant them later in the app settings.',
+          style: NothFlowsTypography.bodyMedium.copyWith(
+            color: NothFlowsColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: NothFlowsColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Skip'),
+            child: Text(
+              'Skip',
+              style: TextStyle(color: NothFlowsColors.nothingRed),
+            ),
           ),
         ],
       ),
@@ -114,18 +136,324 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final grantedCount = _permissionStatus.values.where((v) => v).length;
+    final totalCount = _permissionStatus.length;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = screenWidth < 400 ? 16.0 : 24.0;
+
+    return Scaffold(
+      backgroundColor:
+          isDark ? NothFlowsColors.nothingBlack : NothFlowsColors.surfaceLight,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: NothFlowsSpacing.xl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: NothFlowsSpacing.lg),
+
+                    // Icon
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: NothFlowsColors.nothingRed.withOpacity(0.1),
+                        borderRadius: NothFlowsShapes.borderRadiusLg,
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        color: NothFlowsColors.nothingRed,
+                        size: 28,
+                      ),
+                    ),
+
+                    const SizedBox(height: NothFlowsSpacing.lg),
+
+                    // Title
+                    Text(
+                      'Permissions',
+                      style: NothFlowsTypography.displaySmall.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textPrimary
+                            : NothFlowsColors.textPrimaryLight,
+                      ),
+                    ),
+                    Text(
+                      'Required',
+                      style: NothFlowsTypography.displaySmall.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textPrimary
+                            : NothFlowsColors.textPrimaryLight,
+                      ),
+                    ),
+
+                    const SizedBox(height: NothFlowsSpacing.sm),
+
+                    // Description
+                    Text(
+                      'NothFlows needs access to automate your device settings and files.',
+                      style: NothFlowsTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? NothFlowsColors.textSecondary
+                            : NothFlowsColors.textSecondaryLight,
+                        height: 1.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: NothFlowsSpacing.xl),
+
+                    // Error message
+                    if (_error != null) ...[
+                      NothPanel(
+                        padding: const EdgeInsets.all(14),
+                        backgroundColor: NothFlowsColors.warning.withOpacity(0.1),
+                        borderColor: NothFlowsColors.warning.withOpacity(0.3),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_outlined,
+                              color: NothFlowsColors.warning,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: NothFlowsTypography.bodySmall.copyWith(
+                                  color: NothFlowsColors.warning,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.close,
+                                size: 18,
+                                color: NothFlowsColors.warning,
+                              ),
+                              onPressed: () => setState(() => _error = null),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: NothFlowsSpacing.lg),
+                    ],
+
+                    // Permission explanations
+                    NothPanel(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _buildPermissionExplanation(
+                            icon: Icons.folder_outlined,
+                            title: 'Storage',
+                            subtitle:
+                                'Clean screenshots and downloads automatically',
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(
+                            height: 1,
+                            color: isDark
+                                ? NothFlowsColors.borderDark
+                                : NothFlowsColors.borderLight,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildPermissionExplanation(
+                            icon: Icons.settings_outlined,
+                            title: 'System Settings',
+                            subtitle: 'Adjust brightness, volume, and other settings',
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(
+                            height: 1,
+                            color: isDark
+                                ? NothFlowsColors.borderDark
+                                : NothFlowsColors.borderLight,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildPermissionExplanation(
+                            icon: Icons.sensors_outlined,
+                            title: 'Sensors',
+                            subtitle:
+                                'Context-aware automation using light and motion',
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: NothFlowsSpacing.md),
+
+                    // Permission status
+                    if (_permissionStatus.isNotEmpty) ...[
+                      NothPanel(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Status',
+                                  style: NothFlowsTypography.labelMedium.copyWith(
+                                    color: isDark
+                                        ? NothFlowsColors.textSecondary
+                                        : NothFlowsColors.textSecondaryLight,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: (grantedCount == totalCount
+                                            ? NothFlowsColors.success
+                                            : NothFlowsColors.warning)
+                                        .withOpacity(0.15),
+                                    borderRadius: NothFlowsShapes.borderRadiusSm,
+                                  ),
+                                  child: Text(
+                                    '$grantedCount/$totalCount',
+                                    style: NothFlowsTypography.labelSmall.copyWith(
+                                      color: grantedCount == totalCount
+                                          ? NothFlowsColors.success
+                                          : NothFlowsColors.warning,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            ..._permissionStatus.entries.map((entry) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: entry.value
+                                            ? NothFlowsColors.success
+                                            : NothFlowsColors.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        entry.key,
+                                        style:
+                                            NothFlowsTypography.bodySmall.copyWith(
+                                          color: isDark
+                                              ? NothFlowsColors.textPrimary
+                                              : NothFlowsColors.textPrimaryLight,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      entry.value
+                                          ? Icons.check_circle_outline
+                                          : Icons.cancel_outlined,
+                                      color: entry.value
+                                          ? NothFlowsColors.success
+                                          : NothFlowsColors.error,
+                                      size: 18,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: NothFlowsSpacing.lg),
+                  ],
+                ),
+              ),
+            ),
+
+            // Fixed bottom buttons
+            Container(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                NothFlowsSpacing.md,
+                horizontalPadding,
+                NothFlowsSpacing.lg + MediaQuery.of(context).padding.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? NothFlowsColors.nothingBlack
+                    : NothFlowsColors.surfaceLight,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark
+                        ? NothFlowsColors.borderDark
+                        : NothFlowsColors.borderLight,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  NothButton.primary(
+                    label: 'Grant Permissions',
+                    onPressed: _isRequesting ? null : _requestPermissions,
+                    isLoading: _isRequesting,
+                  ),
+                  const SizedBox(height: NothFlowsSpacing.sm),
+                  NothButton.ghost(
+                    label: 'Skip for now',
+                    onPressed: _isRequesting ? null : _skipPermissions,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPermissionExplanation({
     required IconData icon,
     required String title,
     required String subtitle,
+    required bool isDark,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          color: const Color(0xFF5B4DFF),
-          size: 20,
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: NothFlowsColors.nothingRed.withOpacity(0.1),
+            borderRadius: NothFlowsShapes.borderRadiusSm,
+          ),
+          child: Icon(
+            icon,
+            color: NothFlowsColors.nothingRed,
+            size: 18,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -134,279 +462,26 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: NothFlowsTypography.bodyMedium.copyWith(
+                  color: isDark
+                      ? NothFlowsColors.textPrimary
+                      : NothFlowsColors.textPrimaryLight,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
-                  height: 1.3,
+                style: NothFlowsTypography.bodySmall.copyWith(
+                  color: isDark
+                      ? NothFlowsColors.textSecondary
+                      : NothFlowsColors.textSecondaryLight,
                 ),
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final grantedCount = _permissionStatus.values.where((v) => v).length;
-    final totalCount = _permissionStatus.length;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF000000),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Scrollable content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 40),
-
-                      // Icon
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF5B4DFF).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.shield_outlined,
-                          color: Color(0xFF5B4DFF),
-                          size: 32,
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Title
-                      const Text(
-                        'Permissions Required',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -1.5,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Description
-                      Text(
-                        'NothFlows needs certain permissions to automate your device. '
-                        'This is a test build, so errors will be displayed for debugging.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.7),
-                          height: 1.5,
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Error banner
-                      if (_error != null)
-                        DebugBanner(
-                          error: _error,
-                          onDismiss: () => setState(() => _error = null),
-                        ),
-
-                      const SizedBox(height: 16),
-
-                      // Permission explanations
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildPermissionExplanation(
-                              icon: Icons.folder,
-                              title: 'Storage',
-                              subtitle: 'Clean screenshots and downloads automatically',
-                            ),
-                            const SizedBox(height: 12),
-                            _buildPermissionExplanation(
-                              icon: Icons.settings,
-                              title: 'Modify System Settings',
-                              subtitle: 'Adjust brightness, volume, and other system settings',
-                            ),
-                            const SizedBox(height: 12),
-                            _buildPermissionExplanation(
-                              icon: Icons.sensors,
-                              title: 'Sensors',
-                              subtitle: 'Context awareness (light and motion) to trigger automations',
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Permission status
-                      if (_permissionStatus.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Permission Status',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white.withOpacity(0.7),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '$grantedCount/$totalCount granted',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: grantedCount == totalCount
-                                          ? Colors.green
-                                          : Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              ..._permissionStatus.entries.map((entry) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        entry.value
-                                            ? Icons.check_circle
-                                            : Icons.cancel,
-                                        color: entry.value ? Colors.green : Colors.red,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          entry.key,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.white.withOpacity(0.8),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Fixed bottom buttons
-              // Grant button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isRequesting ? null : _requestPermissions,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5B4DFF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isRequesting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Grant Permissions',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Skip button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: TextButton(
-                  onPressed: _isRequesting ? null : _skipPermissions,
-                  child: Text(
-                    'Skip for now',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Debug info
-              Text(
-                'Debug Mode: Errors will be shown as banners',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.5),
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
