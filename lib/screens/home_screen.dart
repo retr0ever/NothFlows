@@ -6,6 +6,7 @@ import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
 import '../services/tts_service.dart';
+import '../services/wake_word_service.dart';
 import '../widgets/mode_card.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
@@ -23,6 +24,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final _executor = AutomationExecutor();
   final _voiceService = VoiceCommandService();
   final _tts = TtsService();
+  final _wakeWordService = WakeWordService();
+
+  // Picovoice AccessKey from https://console.picovoice.ai/
+  static const String _picovoiceAccessKey = '33oGpjjBGWvnbysyfus5jNiYPQYgs4sTcO51pYU8kXmiA+Rj35dXNg==';
 
   List<ModeModel> _modes = [];
   bool _isLoading = true;
@@ -32,11 +37,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isListening = false;
   String _recognizedText = '';
 
+  // Wake word state
+  bool _isWakeWordEnabled = false;
+  bool _isWakeWordListening = false;
+
   @override
   void initState() {
     super.initState();
     _loadModes();
     _initVoiceService();
+  }
+
+  @override
+  void dispose() {
+    _wakeWordService.dispose();
+    _tts.dispose();
+    super.dispose();
   }
 
   Future<void> _initVoiceService() async {
@@ -59,6 +75,65 @@ class _HomeScreenState extends State<HomeScreen> {
         _showSnackBar('Voice error: $error');
       }
     };
+
+    // Set up wake word callbacks
+    _wakeWordService.onWakeWordDetected = _onWakeWordDetected;
+    _wakeWordService.onError = (error) {
+      debugPrint('[HomeScreen] Wake word error: $error');
+      if (mounted) {
+        _showSnackBar('Wake word error: $error');
+      }
+    };
+  }
+
+  Future<void> _onWakeWordDetected() async {
+    debugPrint('[HomeScreen] Wake word detected! Starting voice command...');
+
+    // Pause wake word detection
+    await _wakeWordService.stopListening();
+    setState(() => _isWakeWordListening = false);
+
+    // Play a sound/speak to indicate we heard the wake word
+    await _tts.speak('Yes?');
+
+    // Start voice command listening
+    await _toggleVoiceListening();
+  }
+
+  Future<void> _toggleWakeWord() async {
+    if (_isWakeWordEnabled) {
+      // Disable wake word
+      await _wakeWordService.stopListening();
+      setState(() {
+        _isWakeWordEnabled = false;
+        _isWakeWordListening = false;
+      });
+      _showSnackBar('Wake word disabled');
+    } else {
+      // Enable wake word - first initialize if needed
+      if (!_wakeWordService.isInitialized) {
+        if (_picovoiceAccessKey == 'YOUR_ACCESS_KEY_HERE') {
+          _showSnackBar('Please set your Picovoice AccessKey in the code');
+          return;
+        }
+        final initialized = await _wakeWordService.initialize(_picovoiceAccessKey);
+        if (!initialized) {
+          _showSnackBar('Could not initialize wake word detection');
+          return;
+        }
+      }
+
+      final started = await _wakeWordService.startListening();
+      if (started) {
+        setState(() {
+          _isWakeWordEnabled = true;
+          _isWakeWordListening = true;
+        });
+        _showSnackBar('Say "North-Flow" to activate voice commands');
+      } else {
+        _showSnackBar('Could not start wake word detection');
+      }
+    }
   }
 
   Future<void> _processVoiceCommand(String text) async {
@@ -66,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!command.isValid) {
       _showSnackBar('Command not recognized: "$text"');
+      await _resumeWakeWordIfEnabled();
       return;
     }
 
@@ -91,6 +167,19 @@ class _HomeScreenState extends State<HomeScreen> {
         _showSnackBar('Command completed successfully');
       } else {
         _showSnackBar('Completed with ${results.length - successCount} errors');
+      }
+    }
+
+    // Resume wake word listening if it was enabled
+    await _resumeWakeWordIfEnabled();
+  }
+
+  Future<void> _resumeWakeWordIfEnabled() async {
+    if (_isWakeWordEnabled && !_isWakeWordListening) {
+      final started = await _wakeWordService.startListening();
+      if (started && mounted) {
+        setState(() => _isWakeWordListening = true);
+        debugPrint('[HomeScreen] Resumed wake word listening');
       }
     }
   }
@@ -431,6 +520,45 @@ class _HomeScreenState extends State<HomeScreen> {
                                 letterSpacing: 0,
                               ),
                             ),
+                            // Wake word indicator
+                            if (_isWakeWordListening) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF5B4DFF).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF5B4DFF).withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF5B4DFF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Listening for "North-Flow"',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF5B4DFF),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -698,6 +826,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context);
                   _showSnackBar('Granted $granted/$total permissions');
                 }
+              },
+            ),
+
+            // Wake word toggle
+            StatefulBuilder(
+              builder: (context, setSheetState) {
+                return SwitchListTile(
+                  secondary: Icon(
+                    _isWakeWordEnabled ? Icons.hearing : Icons.hearing_disabled,
+                    color: _isWakeWordEnabled ? const Color(0xFF5B4DFF) : null,
+                  ),
+                  title: const Text('Always-on Voice'),
+                  subtitle: Text(
+                    _isWakeWordEnabled
+                        ? 'Say "North-Flow" to activate'
+                        : 'Enable hands-free voice commands',
+                  ),
+                  value: _isWakeWordEnabled,
+                  onChanged: (value) async {
+                    Navigator.pop(context);
+                    await _toggleWakeWord();
+                  },
+                );
               },
             ),
 

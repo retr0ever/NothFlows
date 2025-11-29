@@ -36,6 +36,7 @@ dependencies:
   # Voice commands
   speech_to_text: ^7.0.0
   flutter_tts: ^4.0.2
+  porcupine_flutter: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +52,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/models/
+    - assets/North-Flow_en_android_v3_0_0.ppn
 
 flutter_launcher_icons:
   android: true
