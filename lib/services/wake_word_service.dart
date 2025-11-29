@@ -32,17 +32,23 @@ class WakeWordService {
 
   /// Copy asset to temporary directory and return the path
   Future<String> _copyAssetToTemp(String assetPath) async {
-    final tempDir = await getTemporaryDirectory();
-    final tempFile = File('${tempDir.path}/$_wakeWordModelFile');
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$_wakeWordModelFile');
 
-    // Copy only if not already copied
-    if (!await tempFile.exists()) {
-      final data = await rootBundle.load(assetPath);
-      await tempFile.writeAsBytes(data.buffer.asUint8List());
-      debugPrint('[WakeWord] Copied model to: ${tempFile.path}');
+      // Copy only if not already copied
+      if (!await tempFile.exists()) {
+        debugPrint('[WakeWord] Loading asset from: $assetPath');
+        final data = await rootBundle.load(assetPath);
+        await tempFile.writeAsBytes(data.buffer.asUint8List());
+        debugPrint('[WakeWord] Copied model to: ${tempFile.path}');
+      }
+
+      return tempFile.path;
+    } catch (e) {
+      debugPrint('[WakeWord] Failed to copy asset: $e');
+      throw Exception('Failed to copy model file: $e');
     }
-
-    return tempFile.path;
   }
 
   /// Initialize the wake word detection with Picovoice AccessKey
@@ -66,13 +72,9 @@ class WakeWordService {
       _isInitialized = true;
       debugPrint('[WakeWord] Initialized successfully with "North-Flow" wake word');
       return true;
-    } on PorcupineException catch (e) {
-      debugPrint('[WakeWord] Initialization error: ${e.message}');
-      onError?.call('Wake word init failed: ${e.message}');
-      return false;
     } catch (e) {
-      debugPrint('[WakeWord] Unexpected error: $e');
-      onError?.call('Wake word init failed: $e');
+      debugPrint('[WakeWord] Critical initialization error: $e');
+      onError?.call('CRITICAL Wake Word Error: $e');
       return false;
     }
   }

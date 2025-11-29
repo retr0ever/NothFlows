@@ -40,12 +40,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // Wake word state
   bool _isWakeWordEnabled = false;
   bool _isWakeWordListening = false;
+  int _wakeWordRetryCount = 0;
+  static const int _maxWakeWordRetries = 3;
 
   @override
   void initState() {
     super.initState();
     _loadModes();
     _initVoiceService();
+    
+    // Auto-start wake word
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _enableWakeWord();
+    });
   }
 
   @override
@@ -80,10 +87,39 @@ class _HomeScreenState extends State<HomeScreen> {
     _wakeWordService.onWakeWordDetected = _onWakeWordDetected;
     _wakeWordService.onError = (error) {
       debugPrint('[HomeScreen] Wake word error: $error');
-      if (mounted) {
-        _showSnackBar('Wake word error: $error');
-      }
+      _handleWakeWordError(error);
     };
+  }
+
+  Future<void> _handleWakeWordError(String error) async {
+    if (!mounted) return;
+    
+    // Only retry if enabled and under limit
+    if (_isWakeWordEnabled && _wakeWordRetryCount < _maxWakeWordRetries) {
+      _wakeWordRetryCount++;
+      debugPrint('[HomeScreen] Retrying wake word (Attempt $_wakeWordRetryCount/$_maxWakeWordRetries)...');
+      
+      // Wait a bit before retrying to avoid tight loops
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted && _isWakeWordEnabled) {
+        // Try to restart
+        try {
+          await _wakeWordService.stopListening(); // Ensure clean state
+          await _resumeWakeWordIfEnabled();
+        } catch (e) {
+          debugPrint('[HomeScreen] Retry failed: $e');
+        }
+      }
+    } else if (_wakeWordRetryCount >= _maxWakeWordRetries) {
+      // Give up
+      setState(() {
+        _isWakeWordEnabled = false;
+        _isWakeWordListening = false;
+      });
+      _showSnackBar('Wake word disabled: $error');
+      _wakeWordRetryCount = 0;
+    }
   }
 
   Future<void> _onWakeWordDetected() async {
@@ -100,6 +136,45 @@ class _HomeScreenState extends State<HomeScreen> {
     await _toggleVoiceListening();
   }
 
+  Future<void> _enableWakeWord() async {
+    if (_isWakeWordEnabled) return;
+
+    // Enable wake word - first initialize if needed
+    if (!_wakeWordService.isInitialized) {
+      if (_picovoiceAccessKey == 'YOUR_ACCESS_KEY_HERE') {
+        _showSnackBar('ERROR: Picovoice AccessKey is missing!');
+        return;
+      }
+      
+      try {
+        final initialized = await _wakeWordService.initialize(_picovoiceAccessKey);
+        if (!initialized) {
+          _showSnackBar('ERROR: Could not initialize wake word engine');
+          return;
+        }
+      } catch (e) {
+         _showSnackBar('EXCEPTION: Wake word init crashed: $e');
+         return;
+      }
+    }
+
+    try {
+      final started = await _wakeWordService.startListening();
+      if (started) {
+        setState(() {
+          _isWakeWordEnabled = true;
+          _isWakeWordListening = true;
+        });
+        _wakeWordRetryCount = 0; // Reset retries on success
+        _showSnackBar('Wake word ACTIVE. Say "North-Flow"');
+      } else {
+        _handleWakeWordError('Could not start microphone');
+      }
+    } catch (e) {
+      _handleWakeWordError('Start crashed: $e');
+    }
+  }
+
   Future<void> _toggleWakeWord() async {
     if (_isWakeWordEnabled) {
       // Disable wake word
@@ -110,29 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       _showSnackBar('Wake word disabled');
     } else {
-      // Enable wake word - first initialize if needed
-      if (!_wakeWordService.isInitialized) {
-        if (_picovoiceAccessKey == 'YOUR_ACCESS_KEY_HERE') {
-          _showSnackBar('Please set your Picovoice AccessKey in the code');
-          return;
-        }
-        final initialized = await _wakeWordService.initialize(_picovoiceAccessKey);
-        if (!initialized) {
-          _showSnackBar('Could not initialize wake word detection');
-          return;
-        }
-      }
-
-      final started = await _wakeWordService.startListening();
-      if (started) {
-        setState(() {
-          _isWakeWordEnabled = true;
-          _isWakeWordListening = true;
-        });
-        _showSnackBar('Say "North-Flow" to activate voice commands');
-      } else {
-        _showSnackBar('Could not start wake word detection');
-      }
+      await _enableWakeWord();
     }
   }
 
@@ -176,10 +229,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _resumeWakeWordIfEnabled() async {
     if (_isWakeWordEnabled && !_isWakeWordListening) {
-      final started = await _wakeWordService.startListening();
-      if (started && mounted) {
-        setState(() => _isWakeWordListening = true);
-        debugPrint('[HomeScreen] Resumed wake word listening');
+      try {
+        final started = await _wakeWordService.startListening();
+        if (started && mounted) {
+          setState(() => _isWakeWordListening = true);
+          _wakeWordRetryCount = 0; // Reset retries on success
+          debugPrint('[HomeScreen] Resumed wake word listening');
+        } else {
+          _handleWakeWordError('Failed to resume listening');
+        }
+      } catch (e) {
+        _handleWakeWordError('Resume crashed: $e');
       }
     }
   }
