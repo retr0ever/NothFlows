@@ -28,8 +28,11 @@ NothFlows replaces generic Sleep/Focus modes with six accessibility-focused cate
 
 ### Core Capabilities
 
+- **Wake Word Activation**: Always-on "North-Flow" wake word detection using Picovoice Porcupine
 - **Smart Habit Learning**: Automatically detects usage patterns and suggests modes at the right time
 - **Voice-First Interaction**: Hands-free mode activation and control via speech recognition
+- **Text-to-Speech Responses**: Voice feedback for all actions and mode changes
+- **App Integration**: Screen reading capability from external apps via accessibility service
 - **28 Accessibility Actions**: Comprehensive action library covering vision, motor, cognitive, hearing, and system controls
 - **Sensor-Aware Automation**: Context-based triggers using ambient light, device motion, and time of day
 - **Natural Language Flows**: Add automations by describing what you need in plain English
@@ -41,7 +44,16 @@ NothFlows replaces generic Sleep/Focus modes with six accessibility-focused cate
 
 ## Recent Updates
 
-### Smart Habit Learning (Latest)
+### Wake Word Detection (Latest)
+**Hands-free activation with custom "North-Flow" wake word:**
+- **Always-on listening**: Picovoice Porcupine runs continuously in background
+- **Custom wake word**: Trained specifically for "North-Flow" trigger phrase
+- **Privacy-first**: All processing happens on-device, no cloud connection
+- **Low battery impact**: Optimised for continuous monitoring
+- **Voice response**: TTS confirms detection with "Yes?" prompt
+- **Auto-启动**: Wake word detection starts automatically on app launch
+
+### Smart Habit Learning
 **Automatic pattern detection and intelligent suggestions:**
 - **Learns your habits**: Tracks when you use each mode (time of day, day of week)
 - **No manual setup**: Patterns detected automatically from usage history
@@ -51,12 +63,22 @@ NothFlows replaces generic Sleep/Focus modes with six accessibility-focused cate
 - **LLM-powered context**: Shared knowledge base injected into AI prompts for personalised responses
 - **Demo mode**: Settings → "Demo Smart Suggestion" to preview the feature instantly
 
-### Voice Command Support
-**Hands-free mode activation and control:**
-- Voice commands for mode activation: "Activate Vision mode" / "Deactivate Focus"
-- Direct action commands: "Set brightness to 50", "Enable Do Not Disturb"
-- Real-time speech-to-text recognition with confidence scoring
-- Microphone FAB button on home screen with visual feedback
+### Voice Command Support & TTS Responses
+**Hands-free mode activation with voice feedback:**
+- **Wake word trigger**: Say "North-Flow" to activate voice listening
+- **Mode activation**: "Activate Vision mode" / "Deactivate Focus"
+- **Direct actions**: "Set brightness to 50", "Enable Do Not Disturb"
+- **Speech recognition**: Real-time speech-to-text with confidence scoring
+- **Voice responses**: TTS feedback for all actions ("Vision mode activated", "Brightness adjusted")
+- **Microphone FAB**: Manual trigger button on home screen with visual feedback
+
+### App Integration & Screen Reading
+**Deep integration with external apps via accessibility service:**
+- **Screen content reading**: Extracts text from any app using Android Accessibility API
+- **App launching by keyword**: "Open my email app" finds and launches Gmail/Outlook
+- **Context-aware suggestions**: Reads current app content and provides relevant actions
+- **LLM-powered understanding**: Cactus SDK interprets app content for intelligent responses
+- **Accessibility permission**: Requires one-time accessibility service enablement
 
 ### Sensor-Aware Automation
 **Context-based conditional flows:**
@@ -87,39 +109,51 @@ lib/
 ├── main.dart                           # App entry point with splash screen
 ├── models/
 │   ├── flow_dsl.dart                  # DSL schema with 28 actions + conditions
-│   └── mode_model.dart                # 6 assistive modes with metadata
+│   ├── mode_model.dart                # 6 assistive modes with metadata
+│   ├── usage_event.dart               # Mode activation tracking
+│   ├── habit_pattern.dart             # Detected behaviour patterns
+│   ├── user_preference.dart           # Learned preferences
+│   ├── suggestion_outcome.dart        # Feedback tracking
+│   └── user_knowledge_base.dart       # LLM context aggregation
 ├── services/
-│   ├── cactus_llm_service.dart       # Qwen3 LLM integration
+│   ├── cactus_llm_service.dart        # Qwen3 LLM integration
+│   ├── wake_word_service.dart         # Porcupine "North-Flow" detection
+│   ├── tts_service.dart               # Text-to-speech voice responses
 │   ├── voice_command_service.dart     # Speech-to-text recognition
+│   ├── app_integration_service.dart   # Screen reading & app launching
 │   ├── sensor_service.dart            # Motion/light sensor monitoring
-│   ├── habit_tracker_service.dart     # Usage event recording (NEW)
-│   ├── pattern_analyzer_service.dart  # Automatic habit detection (NEW)
-│   ├── recommendation_service.dart    # Smart mode suggestions (NEW)
-│   ├── feedback_service.dart          # Learn from user responses (NEW)
-│   ├── knowledge_base_service.dart    # LLM context injection (NEW)
+│   ├── habit_tracker_service.dart     # Usage event recording
+│   ├── pattern_analyzer_service.dart  # Automatic habit detection
+│   ├── recommendation_service.dart    # Smart mode suggestions
+│   ├── feedback_service.dart          # Learn from user responses
+│   ├── knowledge_base_service.dart    # LLM context injection
 │   ├── personalization_service.dart   # Check-in logging
 │   ├── storage_service.dart           # Local persistence (Hive + SharedPrefs)
 │   ├── automation_executor.dart       # Flow execution with Android integration
 │   └── permission_service.dart        # Runtime permission management
 ├── screens/
-│   ├── home_screen.dart              # Dashboard with voice FAB
-│   ├── mode_detail_screen.dart       # Flow management with conditions
-│   ├── daily_checkin_screen.dart     # Wellness check-in UI (NEW)
-│   ├── permissions_screen.dart       # Permission request flow
-│   ├── flow_preview_sheet.dart       # Flow preview bottom sheet
-│   └── results_sheet.dart            # Execution results feedback
+│   ├── home_screen.dart               # Dashboard with wake word & voice FAB
+│   ├── mode_detail_screen.dart        # Flow management with conditions
+│   ├── daily_checkin_screen.dart      # Wellness check-in UI
+│   ├── permissions_screen.dart        # Permission request flow
+│   ├── splash_screen.dart             # App launch screen
+│   ├── flow_preview_sheet.dart        # Flow preview bottom sheet
+│   └── results_sheet.dart             # Execution results feedback
 ├── widgets/
-│   ├── glass_panel.dart              # NothingOS aesthetic container
-│   ├── mode_card.dart                # Mode card with category badge
-│   ├── flow_tile.dart                # Flow list item with actions
-│   ├── suggestion_card.dart          # Smart suggestion UI (NEW)
-│   └── debug_banner.dart             # Development debug overlay
-└── models/
-    ├── usage_event.dart              # Mode activation tracking (NEW)
-    ├── habit_pattern.dart            # Detected behavior patterns (NEW)
-    ├── user_preference.dart          # Learned preferences (NEW)
-    ├── suggestion_outcome.dart       # Feedback tracking (NEW)
-    └── user_knowledge_base.dart      # LLM context aggregation (NEW)
+│   ├── noth_card.dart                 # NothingOS mode card
+│   ├── noth_chip.dart                 # Category badges
+│   ├── noth_button.dart               # Custom buttons
+│   ├── noth_toggle.dart               # Mode toggle switches
+│   ├── noth_panel.dart                # Glass panel container
+│   ├── noth_toast.dart                # Toast notifications
+│   ├── suggestion_card.dart           # Smart suggestion UI
+│   └── suggestion_indicator.dart      # Visual indicators
+└── theme/
+    ├── nothflows_colors.dart          # Nothing-inspired colour palette
+    ├── nothflows_typography.dart      # Text styles
+    ├── nothflows_shapes.dart          # Border radius & shapes
+    ├── nothflows_spacing.dart         # Layout spacing
+    └── nothflows_theme.dart           # Theme configuration
 ```
 
 ## DSL Schema
@@ -246,6 +280,29 @@ To preview the suggestion UI without waiting for patterns:
 2. Tap **"Demo Smart Suggestion"**
 3. A sample suggestion card appears immediately
 
+## Wake Word Detection
+
+NothFlows features always-on wake word detection using Picovoice Porcupine with a custom-trained "North-Flow" wake word.
+
+### How It Works
+
+1. **Background monitoring**: Porcupine runs continuously, listening for the wake word
+2. **Wake word detected**: When you say "North-Flow", the app responds with "Yes?" via TTS
+3. **Voice command mode**: Microphone activates for 30 seconds to listen for your command
+4. **Command execution**: Recognized commands are executed and confirmed with voice feedback
+
+### Privacy & Performance
+
+- **100% on-device**: All wake word detection happens locally using Picovoice Porcupine
+- **No cloud connection**: Wake word model stored in assets, never transmitted
+- **Low battery impact**: Optimised algorithm runs efficiently in background
+- **Custom wake word**: Trained specifically for "North-Flow" for accurate recognition
+- **Auto-start**: Wake word detection begins automatically on app launch
+
+### Wake Word Model
+
+The custom wake word model is located at `assets/wake_words/North-Flow_en_android_v3_0_0.ppn` and uses Picovoice's Porcupine v3.0 engine.
+
 ## Voice Commands
 
 The app supports hands-free operation via speech recognition:
@@ -263,11 +320,40 @@ The app supports hands-free operation via speech recognition:
 - **Connectivity**: "Turn off Wi-Fi" / "Disable Bluetooth"
 
 ### Implementation Details
-- Uses `speech_to_text` Flutter plugin
-- 30-second listening timeout with 3-second pause detection
-- Real-time partial results displayed during recording
-- Confidence scoring for each recognition
-- Microphone FAB button on home screen
+- **Wake word**: Picovoice Porcupine with custom "North-Flow" model
+- **Speech recognition**: `speech_to_text` Flutter plugin
+- **TTS responses**: `flutter_tts` for voice feedback
+- **Listening timeout**: 30 seconds with 3-second pause detection
+- **Real-time display**: Partial results shown during recording
+- **Confidence scoring**: Each recognition includes accuracy percentage
+- **Manual trigger**: Microphone FAB button on home screen
+
+## App Integration & Screen Reading
+
+NothFlows can read content from external apps and provide intelligent assistance using Android Accessibility Services.
+
+### Capabilities
+
+- **Screen content extraction**: Reads visible text from any app using Accessibility API
+- **Smart app launching**: Natural language app search and launch
+  - "Open my email app" → Finds and launches Gmail/Outlook
+  - "Launch my music app" → Detects Spotify/YouTube Music
+- **Context-aware AI**: LLM interprets app content for intelligent responses
+- **Cross-app automation**: Trigger flows based on content in external apps
+
+### Setup
+
+1. **Enable accessibility service**: App requests permission on first use
+2. **Grant access**: Go to Settings → Accessibility → NothFlows → Enable
+3. **Voice integration**: Use wake word or voice commands to interact with apps
+4. **Privacy**: All screen content processing happens on-device with Qwen3 LLM
+
+### Example Use Cases
+
+- **Email reading**: "Read my latest email" → Extracts Gmail inbox content
+- **Weather check**: "What's the weather?" → Reads weather app information
+- **Navigation assist**: "Where am I going?" → Reads Google Maps directions
+- **App switching**: "Open calculator" → Launches calculator app
 
 ## Cactus SDK Integration
 
@@ -328,7 +414,8 @@ This runs the full app with on-device AI on Nothing Phone or Android emulator.
    The app will request the following permissions on first run:
    - `MANAGE_EXTERNAL_STORAGE` - For cleaning files
    - `WRITE_SETTINGS` - For brightness/system control
-   - `RECORD_AUDIO` - For voice commands
+   - `RECORD_AUDIO` - For wake word detection & voice commands
+   - `ACCESSIBILITY_SERVICE` - For app integration & screen reading
    - `INTERNET` - **Only needed on first run** to download Qwen3 model
 
 4. **First run**:
@@ -350,12 +437,13 @@ flutter run -d macos
 ## User Journeys
 
 ### Vision Assist User
-1. User opens app → grants storage/settings/microphone permissions
-2. Taps "Vision Assist" mode card
-3. Speaks: "Make text large and boost brightness"
+1. User opens app → grants storage/settings/microphone/accessibility permissions
+2. Says "North-Flow" → Wake word detected, app responds "Yes?"
+3. User says: "Make text large and boost brightness"
 4. Cactus LLM parses instruction → generates DSL with two actions
 5. Automation Executor runs actions on device
-6. Results shown: ✓ Text size increased, ✓ Brightness boosted to 100%
+6. TTS confirms: "Text size increased. Brightness boosted to maximum."
+7. Results shown: ✓ Text size increased, ✓ Brightness boosted to 100%
 
 ### Motor Assist User
 1. Uses daily check-in: "My hands are shaking today"
@@ -554,7 +642,10 @@ flutter build apk --debug
 
 - **Framework**: Flutter (Dart)
 - **AI/ML**: Cactus SDK (Qwen3 0.6B, quantised to Q4_0)
+- **Wake Word Detection**: Picovoice Porcupine v3.0 with custom "North-Flow" model
 - **Speech Recognition**: speech_to_text ^7.0.0
+- **Text-to-Speech**: flutter_tts ^4.2.0
+- **App Integration**: device_apps ^2.2.0 + Android Accessibility Services
 - **Sensors**: sensors_plus ^7.0.0
 - **Storage**: Hive ^2.2.3 + SharedPreferences ^2.2.2
 - **Permissions**: permission_handler ^12.0.1

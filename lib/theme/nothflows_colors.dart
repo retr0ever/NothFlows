@@ -33,13 +33,13 @@ class NothFlowsColors {
   static const Color textDisabledLight = Color(0xFFB3B3B3);
 
   // === MODE CATEGORY COLORS ===
-  static const Color visionBlue = Color(0xFF4DA6FF);
-  static const Color motorPurple = Color(0xFF9F7AEA);
-  static const Color neuroMagenta = Color(0xFFE879F9);
-  static const Color calmTeal = Color(0xFF2DD4BF);
-  static const Color hearingAmber = Color(0xFFFBBF24);
-  static const Color hearingPink = Color(0xFFFF4D9F);
-  static const Color customGreen = Color(0xFF4ADE80);
+  static const Color visionBlue = Color(0xFFD4D6D8);
+  static const Color motorPurple = Color(0xFFA8ACAF);
+  static const Color neuroMagenta = Color(0xFF8E9296);
+  static const Color calmTeal = Color(0xFFE8EAEB);
+  static const Color hearingAmber = Color(0xFFC2C5C8);
+  static const Color hearingPink = Color(0xFFC2C5C8);
+  static const Color customGreen = Color(0xFF6B7075);
 
   // === SEMANTIC COLORS ===
   static const Color success = Color(0xFF4ADE80);

@@ -32,7 +32,7 @@ class ModeModel {
         name: 'Vision Assist',
         description: 'Enhance readability and screen clarity',
         icon: Icons.visibility,
-        color: const Color(0xFF4D9FFF),
+        color: const Color(0xFFD4D6D8),
         category: 'vision',
         flows: [
           FlowDSL(
@@ -58,7 +58,7 @@ class ModeModel {
         name: 'Motor Assist',
         description: 'Reduce gesture complexity and simplify interactions',
         icon: Icons.touch_app,
-        color: const Color(0xFF9F4DFF),
+        color: const Color(0xFFA8ACAF),
         category: 'motor',
         flows: [
           FlowDSL(
@@ -83,7 +83,7 @@ class ModeModel {
         name: 'Neurodivergent Focus',
         description: 'Minimise distractions and sensory overload',
         icon: Icons.psychology,
-        color: const Color(0xFFFF4D9F),
+        color: const Color(0xFF8E9296),
         category: 'cognitive',
         flows: [
           FlowDSL(
@@ -109,7 +109,7 @@ class ModeModel {
         name: 'Calm Mode',
         description: 'Reduce anxiety and overstimulation',
         icon: Icons.self_improvement,
-        color: const Color(0xFF4DFFB8),
+        color: const Color(0xFFE8EAEB),
         category: 'sensory',
         flows: [
           FlowDSL(
@@ -136,7 +136,7 @@ class ModeModel {
         name: 'Hearing Support',
         description: 'Enable captions and visual notifications',
         icon: Icons.hearing,
-        color: const Color(0xFFFFB84D),
+        color: const Color(0xFFC2C5C8),
         category: 'sensory',
         flows: [
           FlowDSL(
@@ -162,7 +162,7 @@ class ModeModel {
         name: 'Custom Assistive',
         description: 'Build your own assistive routine',
         icon: Icons.accessibility_new,
-        color: const Color(0xFF4DFF88),
+        color: const Color(0xFF6B7075),
         category: 'custom',
       );
 
