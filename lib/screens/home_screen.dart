@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
 import '../services/tts_service.dart';
+<<<<<<< HEAD
 import '../theme/nothflows_colors.dart';
 import '../theme/nothflows_typography.dart';
 import '../theme/nothflows_shapes.dart';
@@ -16,6 +17,8 @@ import '../widgets/noth_panel.dart';
 import '../widgets/noth_list_tile.dart';
 import '../widgets/noth_toast.dart';
 import '../widgets/noth_bottom_sheet.dart';
+import '../widgets/noth_toggle.dart';
+import '../services/wake_word_service.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
 import 'permissions_screen.dart';
@@ -33,6 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final _executor = AutomationExecutor();
   final _voiceService = VoiceCommandService();
   final _tts = TtsService();
+  final _wakeWordService = WakeWordService();
+
+  // Picovoice AccessKey from https://console.picovoice.ai/
+  static const String _picovoiceAccessKey = '33oGpjjBGWvnbysyfus5jNiYPQYgs4sTcO51pYU8kXmiA+Rj35dXNg==';
 
   List<ModeModel> _modes = [];
   bool _isLoading = true;
@@ -42,11 +49,29 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isListening = false;
   String _recognizedText = '';
 
+  // Wake word state
+  bool _isWakeWordEnabled = false;
+  bool _isWakeWordListening = false;
+  int _wakeWordRetryCount = 0;
+  static const int _maxWakeWordRetries = 3;
+
   @override
   void initState() {
     super.initState();
     _loadModes();
     _initVoiceService();
+    
+    // Auto-start wake word
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _enableWakeWord();
+    });
+  }
+
+  @override
+  void dispose() {
+    _wakeWordService.dispose();
+    _tts.dispose();
+    super.dispose();
   }
 
   Future<void> _initVoiceService() async {
@@ -69,6 +94,112 @@ class _HomeScreenState extends State<HomeScreen> {
         NothToast.error(context, 'Voice error: $error');
       }
     };
+
+    // Set up wake word callbacks
+    _wakeWordService.onWakeWordDetected = _onWakeWordDetected;
+    _wakeWordService.onError = (error) {
+      debugPrint('[HomeScreen] Wake word error: $error');
+      _handleWakeWordError(error);
+    };
+  }
+
+  Future<void> _handleWakeWordError(String error) async {
+    if (!mounted) return;
+    
+    // Only retry if enabled and under limit
+    if (_isWakeWordEnabled && _wakeWordRetryCount < _maxWakeWordRetries) {
+      _wakeWordRetryCount++;
+      debugPrint('[HomeScreen] Retrying wake word (Attempt $_wakeWordRetryCount/$_maxWakeWordRetries)...');
+      
+      // Wait a bit before retrying to avoid tight loops
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted && _isWakeWordEnabled) {
+        // Try to restart
+        try {
+          await _wakeWordService.stopListening(); // Ensure clean state
+          await _resumeWakeWordIfEnabled();
+        } catch (e) {
+          debugPrint('[HomeScreen] Retry failed: $e');
+        }
+      }
+    } else if (_wakeWordRetryCount >= _maxWakeWordRetries) {
+      // Give up
+      setState(() {
+        _isWakeWordEnabled = false;
+        _isWakeWordListening = false;
+      });
+      NothToast.error(context, 'Wake word disabled: $error');
+      _wakeWordRetryCount = 0;
+    }
+  }
+
+
+  Future<void> _onWakeWordDetected() async {
+    debugPrint('[HomeScreen] Wake word detected! Starting voice command...');
+
+    // Pause wake word detection
+    await _wakeWordService.stopListening();
+    setState(() => _isWakeWordListening = false);
+
+    // Play a sound/speak to indicate we heard the wake word
+    await _tts.speak('Yes?');
+
+    // Start voice command listening
+    await _toggleVoiceListening();
+  }
+
+  Future<void> _enableWakeWord() async {
+    if (_isWakeWordEnabled) return;
+
+    // Enable wake word - first initialize if needed
+    if (!_wakeWordService.isInitialized) {
+      if (_picovoiceAccessKey == 'YOUR_ACCESS_KEY_HERE') {
+        NothToast.error(context, 'ERROR: Picovoice AccessKey is missing!');
+        return;
+      }
+      
+      try {
+        final initialized = await _wakeWordService.initialize(_picovoiceAccessKey);
+        if (!initialized) {
+          NothToast.error(context, 'ERROR: Could not initialize wake word engine');
+          return;
+        }
+      } catch (e) {
+         NothToast.error(context, 'EXCEPTION: Wake word init crashed: $e');
+         return;
+      }
+    }
+
+    try {
+      final started = await _wakeWordService.startListening();
+      if (started) {
+        setState(() {
+          _isWakeWordEnabled = true;
+          _isWakeWordListening = true;
+        });
+        _wakeWordRetryCount = 0; // Reset retries on success
+        NothToast.success(context, 'Wake word ACTIVE. Say "North-Flow"');
+      } else {
+        _handleWakeWordError('Could not start microphone');
+      }
+    } catch (e) {
+      _handleWakeWordError('Start crashed: $e');
+    }
+  }
+
+  Future<void> _toggleWakeWord() async {
+    if (_isWakeWordEnabled) {
+      // Disable wake word
+      await _wakeWordService.stopListening();
+      setState(() {
+        _isWakeWordEnabled = false;
+        _isWakeWordListening = false;
+      });
+      NothToast.info(context, 'Wake word disabled');
+    } else {
+      await _enableWakeWord();
+    }
   }
 
   Future<void> _processVoiceCommand(String text) async {
@@ -76,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!command.isValid) {
       NothToast.warning(context, 'Command not recognized: "$text"');
+      await _resumeWakeWordIfEnabled();
       return;
     }
 
@@ -105,6 +237,26 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           'Completed with ${results.length - successCount} errors',
         );
+      }
+    }
+
+    // Resume wake word listening if it was enabled
+    await _resumeWakeWordIfEnabled();
+  }
+
+  Future<void> _resumeWakeWordIfEnabled() async {
+    if (_isWakeWordEnabled && !_isWakeWordListening) {
+      try {
+        final started = await _wakeWordService.startListening();
+        if (started && mounted) {
+          setState(() => _isWakeWordListening = true);
+          _wakeWordRetryCount = 0; // Reset retries on success
+          debugPrint('[HomeScreen] Resumed wake word listening');
+        } else {
+          _handleWakeWordError('Failed to resume listening');
+        }
+      } catch (e) {
+        _handleWakeWordError('Resume crashed: $e');
       }
     }
   }
@@ -378,15 +530,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const Divider(height: 1),
 
-          // Voice Commands
-          NothListTile.navigation(
-            title: 'Voice Commands',
-            subtitle: 'Configure voice activation',
-            leadingIcon: Icons.mic_none,
-            leadingIconColor: NothFlowsColors.motorPurple,
-            onTap: () {
-              Navigator.pop(context);
-              NothToast.info(context, 'Voice settings coming soon');
+          // Wake Word Toggle
+          StatefulBuilder(
+            builder: (context, setSheetState) {
+              return NothListTile(
+                title: 'Always-on Voice',
+                subtitle: _isWakeWordEnabled
+                    ? 'Say "North-Flow" to activate'
+                    : 'Enable hands-free voice commands',
+                leadingIcon: _isWakeWordEnabled ? Icons.hearing : Icons.hearing_disabled,
+                leadingIconColor: _isWakeWordEnabled ? const Color(0xFF5B4DFF) : null,
+                trailing: NothToggle(
+                  value: _isWakeWordEnabled,
+                  onChanged: (value) async {
+                    Navigator.pop(context);
+                    await _toggleWakeWord();
+                  },
+                ),
+              );
             },
           ),
 
@@ -564,6 +725,45 @@ class _HomeScreenState extends State<HomeScreen> {
                                     : NothFlowsColors.textSecondaryLight,
                               ),
                             ),
+                            // Wake word indicator
+                            if (_isWakeWordListening) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF5B4DFF).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF5B4DFF).withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF5B4DFF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Listening for "North-Flow"',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF5B4DFF),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
