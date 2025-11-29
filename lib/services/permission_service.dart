@@ -128,7 +128,7 @@ class PermissionService {
   }
 
   /// Open app settings
-  Future<void> openAppSettings() async {
+  Future<void> launchAppSettings() async {
     debugPrint('[Permissions] Opening app settings...');
     await openAppSettings();
   }

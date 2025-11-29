@@ -169,166 +169,177 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
-
-              // Icon
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5B4DFF).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  color: Color(0xFF5B4DFF),
-                  size: 32,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Title
-              const Text(
-                'Permissions Required',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: -1.5,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Description
-              Text(
-                'NothFlows needs certain permissions to automate your device. '
-                'This is a test build, so errors will be displayed for debugging.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white.withOpacity(0.7),
-                  height: 1.5,
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Error banner
-              if (_error != null)
-                DebugBanner(
-                  error: _error,
-                  onDismiss: () => setState(() => _error = null),
-                ),
-
-              const SizedBox(height: 16),
-
-              // Permission explanations
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.1),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPermissionExplanation(
-                      icon: Icons.folder,
-                      title: 'Storage',
-                      subtitle: 'Clean screenshots and downloads automatically',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPermissionExplanation(
-                      icon: Icons.settings,
-                      title: 'Modify System Settings',
-                      subtitle: 'Adjust brightness, volume, and other system settings',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPermissionExplanation(
-                      icon: Icons.sensors,
-                      title: 'Sensors',
-                      subtitle: 'Context awareness (light and motion) to trigger automations',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Permission status
-              if (_permissionStatus.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                  ),
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Permission Status',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '$grantedCount/$totalCount granted',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: grantedCount == totalCount
-                                  ? Colors.green
-                                  : Colors.orange,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 40),
+
+                      // Icon
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5B4DFF).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: Color(0xFF5B4DFF),
+                          size: 32,
+                        ),
                       ),
+
+                      const SizedBox(height: 24),
+
+                      // Title
+                      const Text(
+                        'Permissions Required',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -1.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Description
+                      Text(
+                        'NothFlows needs certain permissions to automate your device. '
+                        'This is a test build, so errors will be displayed for debugging.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.7),
+                          height: 1.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Error banner
+                      if (_error != null)
+                        DebugBanner(
+                          error: _error,
+                          onDismiss: () => setState(() => _error = null),
+                        ),
+
                       const SizedBox(height: 16),
-                      ..._permissionStatus.entries.map((entry) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
+
+                      // Permission explanations
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPermissionExplanation(
+                              icon: Icons.folder,
+                              title: 'Storage',
+                              subtitle: 'Clean screenshots and downloads automatically',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildPermissionExplanation(
+                              icon: Icons.settings,
+                              title: 'Modify System Settings',
+                              subtitle: 'Adjust brightness, volume, and other system settings',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildPermissionExplanation(
+                              icon: Icons.sensors,
+                              title: 'Sensors',
+                              subtitle: 'Context awareness (light and motion) to trigger automations',
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Permission status
+                      if (_permissionStatus.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                entry.value
-                                    ? Icons.check_circle
-                                    : Icons.cancel,
-                                color: entry.value ? Colors.green : Colors.red,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  entry.key,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white.withOpacity(0.8),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Permission Status',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withOpacity(0.7),
+                                    ),
                                   ),
-                                ),
+                                  const Spacer(),
+                                  Text(
+                                    '$grantedCount/$totalCount granted',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: grantedCount == totalCount
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 16),
+                              ..._permissionStatus.entries.map((entry) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        entry.value
+                                            ? Icons.check_circle
+                                            : Icons.cancel,
+                                        color: entry.value ? Colors.green : Colors.red,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          entry.key,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.white.withOpacity(0.8),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
                             ],
                           ),
-                        );
-                      }),
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ],
+              ),
 
-              const Spacer(),
-
+              // Fixed bottom buttons
               // Grant button
               SizedBox(
                 width: double.infinity,
