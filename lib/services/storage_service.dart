@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../models/mode_model.dart';
 import '../models/flow_dsl.dart';
+import 'habit_tracker_service.dart';
 
 /// Service for local storage of modes and flows
 class StorageService {
@@ -135,7 +136,7 @@ class StorageService {
   }
 
   /// Set active mode (deactivate all others)
-  Future<void> setActiveMode(String modeId) async {
+  Future<void> setActiveMode(String modeId, {String triggerSource = 'manual'}) async {
     final modes = await getModes();
 
     for (var i = 0; i < modes.length; i++) {
@@ -152,11 +153,22 @@ class StorageService {
     await saveModes(modes);
     await _prefs!.setString(_keyActiveMode, modeId);
 
+    // Record habit tracking event
+    try {
+      await HabitTrackerService().recordModeEvent(
+        modeId: modeId,
+        isActivation: true,
+        triggerSource: triggerSource,
+      );
+    } catch (e) {
+      debugPrint('[Storage] Failed to record habit event: $e');
+    }
+
     debugPrint('[Storage] Set active mode: $modeId');
   }
 
   /// Deactivate all modes
-  Future<void> deactivateAllModes() async {
+  Future<void> deactivateAllModes({String? previousModeId, String triggerSource = 'manual'}) async {
     final modes = await getModes();
 
     for (var i = 0; i < modes.length; i++) {
@@ -165,6 +177,19 @@ class StorageService {
 
     await saveModes(modes);
     await _prefs!.remove(_keyActiveMode);
+
+    // Record habit tracking event for deactivation
+    if (previousModeId != null) {
+      try {
+        await HabitTrackerService().recordModeEvent(
+          modeId: previousModeId,
+          isActivation: false,
+          triggerSource: triggerSource,
+        );
+      } catch (e) {
+        debugPrint('[Storage] Failed to record habit event: $e');
+      }
+    }
 
     debugPrint('[Storage] Deactivated all modes');
   }
@@ -178,14 +203,14 @@ class StorageService {
   }
 
   /// Toggle mode activation
-  Future<void> toggleMode(String modeId) async {
+  Future<void> toggleMode(String modeId, {String triggerSource = 'manual'}) async {
     final mode = await getMode(modeId);
     if (mode == null) return;
 
     if (mode.isActive) {
-      await deactivateAllModes();
+      await deactivateAllModes(previousModeId: modeId, triggerSource: triggerSource);
     } else {
-      await setActiveMode(modeId);
+      await setActiveMode(modeId, triggerSource: triggerSource);
     }
   }
 

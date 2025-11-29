@@ -28,18 +28,30 @@ NothFlows replaces generic Sleep/Focus modes with six accessibility-focused cate
 
 ### Core Capabilities
 
+- **Smart Habit Learning**: Automatically detects usage patterns and suggests modes at the right time
 - **Voice-First Interaction**: Hands-free mode activation and control via speech recognition
 - **28 Accessibility Actions**: Comprehensive action library covering vision, motor, cognitive, hearing, and system controls
 - **Sensor-Aware Automation**: Context-based triggers using ambient light, device motion, and time of day
 - **Natural Language Flows**: Add automations by describing what you need in plain English
 - **Daily Check-In**: AI-powered wellness tracking with contextual recommendations
 - **100% On-Device AI**: All inference happens locally using Cactus SDK (Qwen3 0.6B)
+- **LLM Shared Memory**: Knowledge base injection for personalised AI responses
 - **Privacy-First**: No cloud fallback, all data stays on your device
 - **NothingOS Integration**: Deep Android accessibility service integration
 
 ## Recent Updates
 
-### Voice Command Support (Latest)
+### Smart Habit Learning (Latest)
+**Automatic pattern detection and intelligent suggestions:**
+- **Learns your habits**: Tracks when you use each mode (time of day, day of week)
+- **No manual setup**: Patterns detected automatically from usage history
+- **Smart suggestions**: Recommends modes based on your habits ("You usually use Vision Assist around this time")
+- **Feedback loop**: Learns from accepted/rejected suggestions to improve accuracy
+- **Privacy-first**: All habit data stored locally in Hive database
+- **LLM-powered context**: Shared knowledge base injected into AI prompts for personalised responses
+- **Demo mode**: Settings → "Demo Smart Suggestion" to preview the feature instantly
+
+### Voice Command Support
 **Hands-free mode activation and control:**
 - Voice commands for mode activation: "Activate Vision mode" / "Deactivate Focus"
 - Direct action commands: "Set brightness to 50", "Enable Do Not Disturb"
@@ -78,9 +90,14 @@ lib/
 │   └── mode_model.dart                # 6 assistive modes with metadata
 ├── services/
 │   ├── cactus_llm_service.dart       # Qwen3 LLM integration
-│   ├── voice_command_service.dart     # Speech-to-text recognition (NEW)
-│   ├── sensor_service.dart            # Motion/light sensor monitoring (NEW)
-│   ├── personalization_service.dart   # Check-in logging (NEW)
+│   ├── voice_command_service.dart     # Speech-to-text recognition
+│   ├── sensor_service.dart            # Motion/light sensor monitoring
+│   ├── habit_tracker_service.dart     # Usage event recording (NEW)
+│   ├── pattern_analyzer_service.dart  # Automatic habit detection (NEW)
+│   ├── recommendation_service.dart    # Smart mode suggestions (NEW)
+│   ├── feedback_service.dart          # Learn from user responses (NEW)
+│   ├── knowledge_base_service.dart    # LLM context injection (NEW)
+│   ├── personalization_service.dart   # Check-in logging
 │   ├── storage_service.dart           # Local persistence (Hive + SharedPrefs)
 │   ├── automation_executor.dart       # Flow execution with Android integration
 │   └── permission_service.dart        # Runtime permission management
@@ -91,11 +108,18 @@ lib/
 │   ├── permissions_screen.dart       # Permission request flow
 │   ├── flow_preview_sheet.dart       # Flow preview bottom sheet
 │   └── results_sheet.dart            # Execution results feedback
-└── widgets/
-    ├── glass_panel.dart              # NothingOS aesthetic container
-    ├── mode_card.dart                # Mode card with category badge
-    ├── flow_tile.dart                # Flow list item with actions
-    └── debug_banner.dart             # Development debug overlay
+├── widgets/
+│   ├── glass_panel.dart              # NothingOS aesthetic container
+│   ├── mode_card.dart                # Mode card with category badge
+│   ├── flow_tile.dart                # Flow list item with actions
+│   ├── suggestion_card.dart          # Smart suggestion UI (NEW)
+│   └── debug_banner.dart             # Development debug overlay
+└── models/
+    ├── usage_event.dart              # Mode activation tracking (NEW)
+    ├── habit_pattern.dart            # Detected behavior patterns (NEW)
+    ├── user_preference.dart          # Learned preferences (NEW)
+    ├── suggestion_outcome.dart       # Feedback tracking (NEW)
+    └── user_knowledge_base.dart      # LLM context aggregation (NEW)
 ```
 
 ## DSL Schema
@@ -179,6 +203,48 @@ Flows can include optional conditions that must be met before execution:
 | `time_of_day` | `morning/afternoon/evening/night` | Time-based triggers |
 | `battery_level` | `0-100` | Battery percentage threshold |
 | `is_charging` | `true/false` | Charging status |
+
+## Smart Habit Learning
+
+NothFlows learns your usage patterns and makes intelligent suggestions without any manual setup.
+
+### How It Works
+
+1. **Usage Tracking**: Every mode activation/deactivation is recorded with context (time, day, ambient conditions)
+2. **Pattern Detection**: After 10+ events, the system analyzes your habits:
+   - Time-based patterns: "Uses Vision Assist every evening"
+   - Day-based patterns: "Uses Focus Mode on weekdays"
+   - Sequence patterns: "Uses Calm Mode after Motor Assist"
+3. **Smart Suggestions**: When context matches a detected pattern, a suggestion card appears
+4. **Feedback Loop**: Accept/dismiss/block responses adjust pattern confidence
+
+### Suggestion Card
+
+When a suggestion appears:
+- **Tap to expand** for more details ("Why this suggestion?")
+- **Activate**: Accepts suggestion and activates the mode
+- **Not now**: Dismisses temporarily (slight confidence decrease)
+- **Don't suggest**: Permanently blocks this pattern
+
+### LLM Context Injection
+
+The habit system provides a "shared memory" for the local LLM:
+```dart
+// Knowledge base generates context like:
+// - Frequently uses: Vision mode (12x), Calm mode (8x)
+// - Pattern: You often use Vision mode in the evening
+// - Prefers reminder-style suggestions
+// - Suggestion acceptance rate: 75%
+```
+
+This context is injected into LLM prompts for more personalised AI responses.
+
+### Demo Mode
+
+To preview the suggestion UI without waiting for patterns:
+1. Open **Settings** (gear icon)
+2. Tap **"Demo Smart Suggestion"**
+3. A sample suggestion card appears immediately
 
 ## Voice Commands
 

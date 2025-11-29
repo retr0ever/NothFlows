@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/storage_service.dart';
+import 'services/habit_tracker_service.dart';
 import 'theme/nothflows_theme.dart';
 import 'screens/splash_screen.dart';
 
@@ -11,6 +12,9 @@ void main() async {
 
   // Initialize storage
   await StorageService().initialise();
+
+  // Initialize habit tracking (Hive)
+  await HabitTrackerService().initialize();
 
   runApp(const NothFlowsApp());
 }

@@ -7,6 +7,8 @@ import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
 import '../services/tts_service.dart';
+import '../services/recommendation_service.dart';
+import '../services/feedback_service.dart';
 import '../theme/nothflows_colors.dart';
 import '../theme/nothflows_typography.dart';
 import '../theme/nothflows_shapes.dart';
@@ -17,6 +19,7 @@ import '../widgets/noth_list_tile.dart';
 import '../widgets/noth_toast.dart';
 import '../widgets/noth_bottom_sheet.dart';
 import '../widgets/noth_toggle.dart';
+import '../widgets/suggestion_card.dart';
 import '../services/wake_word_service.dart';
 import 'mode_detail_screen.dart';
 import 'daily_checkin_screen.dart';
@@ -36,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _voiceService = VoiceCommandService();
   final _tts = TtsService();
   final _wakeWordService = WakeWordService();
+  final _recommendationService = RecommendationService();
+  final _feedbackService = FeedbackService();
 
   // Picovoice AccessKey from https://console.picovoice.ai/
   static const String _picovoiceAccessKey = '33oGpjjBGWvnbysyfus5jNiYPQYgs4sTcO51pYU8kXmiA+Rj35dXNg==';
@@ -53,6 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isWakeWordListening = false;
   int _wakeWordRetryCount = 0;
   static const int _maxWakeWordRetries = 3;
+
+  // Suggestion state
+  Recommendation? _currentRecommendation;
+  bool _suggestionExpanded = false;
 
   @override
   void initState() {
@@ -297,10 +306,88 @@ class _HomeScreenState extends State<HomeScreen> {
         _modes = modes;
         _isLoading = false;
       });
+
+      // Check for recommendations after loading modes
+      await _checkForRecommendations();
     } catch (e) {
       debugPrint('Error loading modes: $e');
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _checkForRecommendations() async {
+    try {
+      final recommendation = await _recommendationService.getCurrentRecommendation();
+      if (mounted) {
+        setState(() {
+          _currentRecommendation = recommendation;
+        });
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Error checking recommendations: $e');
+    }
+  }
+
+  Future<void> _onSuggestionAccepted(Recommendation recommendation) async {
+    // Record feedback
+    await _feedbackService.onSuggestionAccepted(recommendation);
+
+    // Find and activate the mode
+    final mode = _modes.firstWhere(
+      (m) => m.id == recommendation.modeId,
+      orElse: () => throw Exception('Mode not found'),
+    );
+
+    // Remove the suggestion
+    setState(() {
+      _currentRecommendation = null;
+      _suggestionExpanded = false;
+    });
+
+    // Activate the mode
+    await _toggleMode(mode);
+  }
+
+  Future<void> _onSuggestionDismissed(Recommendation recommendation) async {
+    // Record feedback
+    await _feedbackService.onSuggestionRejected(recommendation);
+
+    // Remove the suggestion
+    setState(() {
+      _currentRecommendation = null;
+      _suggestionExpanded = false;
+    });
+
+    if (mounted) {
+      NothToast.info(context, 'Suggestion dismissed');
+    }
+  }
+
+  Future<void> _onSuggestionBlocked(Recommendation recommendation) async {
+    // Record feedback
+    await _feedbackService.onSuggestionBlocked(recommendation);
+
+    // Remove the suggestion
+    setState(() {
+      _currentRecommendation = null;
+      _suggestionExpanded = false;
+    });
+
+    if (mounted) {
+      NothToast.info(context, "Won't suggest this again");
+    }
+  }
+
+  /// Show a demo suggestion for presentation purposes
+  void _showDemoSuggestion() {
+    final demo = _recommendationService.createDemoRecommendation(
+      modeId: 'vision',
+    );
+    setState(() {
+      _currentRecommendation = demo;
+      _suggestionExpanded = false;
+    });
+    NothToast.success(context, 'Demo suggestion shown!');
   }
 
   Future<void> _toggleMode(ModeModel mode) async {
@@ -552,6 +639,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const Divider(height: 1),
 
+          // Demo Suggestion (for presentations)
+          NothListTile(
+            title: 'Demo Smart Suggestion',
+            subtitle: 'Show a sample habit suggestion',
+            leadingIcon: Icons.lightbulb_outline,
+            leadingIconColor: NothFlowsColors.info,
+            onTap: () {
+              Navigator.pop(context);
+              _showDemoSuggestion();
+            },
+          ),
+
+          const Divider(height: 1),
+
           // Reset Data
           NothListTile.destructive(
             title: 'Reset Data',
@@ -771,6 +872,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
+                    // Smart suggestions
+                    if (_currentRecommendation != null)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Show the current recommendation as a card
+                            SuggestionCard(
+                              recommendation: _currentRecommendation!,
+                              onAccept: () =>
+                                  _onSuggestionAccepted(_currentRecommendation!),
+                              onDismiss: () =>
+                                  _onSuggestionDismissed(_currentRecommendation!),
+                              onBlock: () =>
+                                  _onSuggestionBlocked(_currentRecommendation!),
+                              isExpanded: _suggestionExpanded,
+                              onToggleExpand: () {
+                                setState(() {
+                                  _suggestionExpanded = !_suggestionExpanded;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
 
                     // Mode cards
                     SliverPadding(
