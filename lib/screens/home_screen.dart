@@ -7,7 +7,6 @@ import '../services/storage_service.dart';
 import '../services/automation_executor.dart';
 import '../services/voice_command_service.dart';
 import '../services/tts_service.dart';
-<<<<<<< HEAD
 import '../theme/nothflows_colors.dart';
 import '../theme/nothflows_typography.dart';
 import '../theme/nothflows_shapes.dart';
@@ -663,13 +662,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      Text(
-                                        'NothFlows',
-                                        style: NothFlowsTypography.displaySmall
-                                            .copyWith(
-                                          color: isDark
-                                              ? NothFlowsColors.textPrimary
-                                              : NothFlowsColors.textPrimaryLight,
+                                      Expanded(
+                                        child: Text(
+                                          'NothFlows',
+                                          style: NothFlowsTypography.displaySmall
+                                              .copyWith(
+                                            color: isDark
+                                                ? NothFlowsColors.textPrimary
+                                                : NothFlowsColors.textPrimaryLight,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                       ),
                                       if (_isSimulation) ...[
