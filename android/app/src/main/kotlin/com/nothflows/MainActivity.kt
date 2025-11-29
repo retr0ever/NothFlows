@@ -13,10 +13,12 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.nothflows/system"
+    private val APP_INTEGRATION_CHANNEL = "com.nothflows/app_integration"
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // System control channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setBrightness" -> {
@@ -339,6 +341,151 @@ class MainActivity: FlutterActivity() {
                             android.util.Log.e("NothFlows", "Failed to open one-handed mode settings", e)
                             result.error("FAILED", "Cannot enable one-handed mode", null)
                         }
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+
+        // App integration channel for launching external apps
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APP_INTEGRATION_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isAccessibilityEnabled" -> {
+                    try {
+                        val isEnabled = NothFlowsAccessibilityService.isEnabled()
+                        result.success(isEnabled)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error checking accessibility status", e)
+                        result.success(false)
+                    }
+                }
+
+                "openAccessibilitySettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        android.util.Log.d("NothFlows", "Opened accessibility settings")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error opening accessibility settings", e)
+                        result.error("FAILED", "Cannot open settings: ${e.message}", null)
+                    }
+                }
+
+                "readScreenContent" -> {
+                    try {
+                        // Use accessibility service to read content from any app
+                        val service = NothFlowsAccessibilityService.getInstance()
+                        if (service != null) {
+                            val content = service.readCurrentScreen()
+                            result.success(content)
+                        } else {
+                            result.error("NOT_ENABLED", "Accessibility service is not enabled", null)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error reading screen content", e)
+                        result.error("FAILED", "Cannot read screen: ${e.message}", null)
+                    }
+                }
+
+                "launchApp" -> {
+                    val packageName = call.argument<String>("packageName")
+                    if (packageName == null) {
+                        result.error("INVALID_ARGS", "Missing packageName", null)
+                        return@setMethodCallHandler
+                    }
+                    
+                    try {
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
+                        if (intent != null) {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            android.util.Log.d("NothFlows", "Launched app: $packageName")
+                            result.success(true)
+                        } else {
+                            android.util.Log.w("NothFlows", "App not found: $packageName")
+                            result.success(false)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error launching app: $packageName", e)
+                        result.error("FAILED", "Cannot launch app: ${e.message}", null)
+                    }
+                }
+
+                "launchGmailApp" -> {
+                    try {
+                        // Try to launch Gmail with ACTION_MAIN
+                        val intent = packageManager.getLaunchIntentForPackage("com.google.android.gm")
+                        if (intent != null) {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            android.util.Log.d("NothFlows", "Launched Gmail app")
+                            result.success(true)
+                        } else {
+                            // Gmail not installed, try generic email intent
+                            val emailIntent = Intent(Intent.ACTION_MAIN)
+                            emailIntent.addCategory(Intent.CATEGORY_APP_EMAIL)
+                            emailIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                startActivity(emailIntent)
+                                android.util.Log.d("NothFlows", "Launched default email app")
+                                result.success(true)
+                            } catch (e: Exception) {
+                                android.util.Log.e("NothFlows", "No email app found", e)
+                                result.success(false)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error launching Gmail", e)
+                        result.error("FAILED", "Cannot launch Gmail: ${e.message}", null)
+                    }
+                }
+
+                "launchWeatherApp" -> {
+                    try {
+                        // Try common weather app packages (Nothing, Google, etc.)
+                        val weatherPackages = listOf(
+                            "com.nothing.weather",           // Nothing Weather
+                            "com.google.android.apps.weather", // Google Weather
+                            "com.weather.Weather",            // Generic Weather
+                            "com.android.settings.weather"    // Settings Weather Widget
+                        )
+
+                        var launched = false
+                        for (packageName in weatherPackages) {
+                            try {
+                                val intent = packageManager.getLaunchIntentForPackage(packageName)
+                                if (intent != null) {
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(intent)
+                                    android.util.Log.d("NothFlows", "Launched weather app: $packageName")
+                                    launched = true
+                                    break
+                                }
+                            } catch (e: Exception) {
+                                continue
+                            }
+                        }
+
+                        if (!launched) {
+                            // Fallback: open weather via web browser
+                            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=weather"))
+                            webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                startActivity(webIntent)
+                                android.util.Log.d("NothFlows", "Opened weather via browser")
+                                launched = true
+                            } catch (e: Exception) {
+                                android.util.Log.e("NothFlows", "Failed to open weather via browser", e)
+                            }
+                        }
+
+                        result.success(launched)
+                    } catch (e: Exception) {
+                        android.util.Log.e("NothFlows", "Error launching weather app", e)
+                        result.error("FAILED", "Cannot launch weather app: ${e.message}", null)
                     }
                 }
 

@@ -6,6 +6,7 @@ import 'package:device_apps/device_apps.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/flow_dsl.dart';
 import 'sensor_service.dart';
+import 'app_integration_service.dart';
 
 /// Result of executing a flow action
 class ExecutionResult {
@@ -34,6 +35,7 @@ class AutomationExecutor {
 
   // MethodChannel for native Android system control
   static const platform = MethodChannel('com.nothflows/system');
+  final AppIntegrationService _appIntegration = AppIntegrationService();
 
   /// Execute a complete flow
   Future<List<ExecutionResult>> executeFlow(FlowDSL flow) async {
@@ -163,6 +165,16 @@ class AutomationExecutor {
         // Safety action
         case 'launch_care_app':
           return await _launchCareApp(action.parameters);
+
+        // App integration actions
+        case 'app_read_gmail':
+          return await _appReadGmail(action.parameters);
+
+        case 'app_read_weather':
+          return await _appReadWeather(action.parameters);
+
+        case 'app_open':
+          return await _appOpen(action.parameters);
 
         default:
           return ExecutionResult(
@@ -874,6 +886,84 @@ class AutomationExecutor {
         actionType: 'launch_care_app',
         success: false,
         message: 'Could not find emergency contacts app',
+      );
+    }
+  }
+
+  // ============================================================================
+  // APP INTEGRATION ACTIONS
+  // ============================================================================
+
+  /// Open Gmail and read first unread email
+  Future<ExecutionResult> _appReadGmail(Map<String, dynamic> params) async {
+    try {
+      debugPrint('[Executor] Opening Gmail and reading first unread email');
+      final result = await _appIntegration.openGmailAndReadFirstUnread();
+
+      return ExecutionResult(
+        actionType: 'app_read_gmail',
+        success: result['success'] as bool,
+        message: result['message'] as String,
+        data: result['email'],
+      );
+    } catch (e) {
+      debugPrint('[Executor] Error in Gmail integration: $e');
+      return ExecutionResult(
+        actionType: 'app_read_gmail',
+        success: false,
+        message: 'Error: $e',
+      );
+    }
+  }
+
+  /// Open Weather app and read current weather
+  Future<ExecutionResult> _appReadWeather(Map<String, dynamic> params) async {
+    try {
+      debugPrint('[Executor] Opening Weather app and reading forecast');
+      final result = await _appIntegration.openWeatherAndReadCurrent();
+
+      return ExecutionResult(
+        actionType: 'app_read_weather',
+        success: result['success'] as bool,
+        message: result['message'] as String,
+        data: result['weather'],
+      );
+    } catch (e) {
+      debugPrint('[Executor] Error in Weather integration: $e');
+      return ExecutionResult(
+        actionType: 'app_read_weather',
+        success: false,
+        message: 'Error: $e',
+      );
+    }
+  }
+
+  Future<ExecutionResult> _appOpen(Map<String, dynamic> params) async {
+    try {
+      final appName = params['app_name'] as String?;
+      if (appName == null || appName.isEmpty) {
+        return ExecutionResult(
+          actionType: 'app_open',
+          success: false,
+          message: 'No app name provided',
+        );
+      }
+
+      debugPrint('[Executor] Opening app: $appName');
+      final result = await _appIntegration.launchAppByKeyword(keyword: appName);
+
+      return ExecutionResult(
+        actionType: 'app_open',
+        success: result['success'] as bool,
+        message: result['message'] as String,
+        data: result,
+      );
+    } catch (e) {
+      debugPrint('[Executor] Error opening app: $e');
+      return ExecutionResult(
+        actionType: 'app_open',
+        success: false,
+        message: 'Error: $e',
       );
     }
   }

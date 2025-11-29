@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NothFlows</string>
+    <string name="accessibility_service_description">NothFlows needs accessibility permission to read content from other apps like Gmail and Weather when you ask it to. This allows voice commands like \'read my emails\' to work properly.</string>
+</resources>

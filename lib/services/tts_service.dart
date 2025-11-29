@@ -42,6 +42,10 @@ class TtsService {
     'launch_app': 'App launched',
     'mute_apps': 'Apps muted',
 
+    // App integration
+    'app_read_gmail': 'Reading your email',
+    'app_read_weather': 'Checking the weather',
+
     // Errors
     'error.not_recognized': 'Command not recognized',
     'error.failed': 'Action failed',

@@ -148,6 +148,10 @@ class FlowDSL {
       // Voice command actions
       'voice_activation',
       'speak_response',
+      // App integration actions
+      'app_read_gmail',
+      'app_read_weather',
+      'app_open',
     };
 
     for (final action in actions) {
@@ -306,6 +310,14 @@ class FlowDSL {
         case 'launch_care_app':
           final app = action.parameters['app'] ?? 'Emergency Contacts';
           buffer.writeln('Launch $app');
+          break;
+
+        // App integration actions
+        case 'app_read_gmail':
+          buffer.writeln('Open Gmail and read first unread email');
+          break;
+        case 'app_read_weather':
+          buffer.writeln('Open Weather app and read current forecast');
           break;
 
         default:

@@ -263,6 +263,55 @@ class VoiceCommandService {
     final numberMatch = RegExp(r'(\d+)').firstMatch(lower);
     final number = numberMatch != null ? int.parse(numberMatch.group(1)!) : null;
 
+    // Generic app integration - match "open [app]" or "open [multi-word app]"
+    // More flexible pattern that captures multi-word app names
+    final appOpenPattern = RegExp(r'(?:open|launch)\s+(.+?)(?:\s+(?:app|application))?$');
+    final appMatch = appOpenPattern.firstMatch(lower);
+    
+    if (appMatch != null) {
+      final rawAppName = appMatch.group(1)!.trim();
+      // Remove "the" from app names
+      final appName = rawAppName.replaceFirst(RegExp(r'^the\s+'), '');
+      
+      debugPrint('[VoiceCommand] Detected app open request: "$appName"');
+      
+      // Check if it's a known app type for specific read actions
+      if (appName.contains('gmail') || appName.contains('email') || appName.contains('mail')) {
+        return FlowAction(
+          type: 'app_read_gmail',
+          parameters: {},
+        );
+      } else if (appName.contains('weather') || appName.contains('forecast')) {
+        return FlowAction(
+          type: 'app_read_weather',
+          parameters: {},
+        );
+      }
+      // For any other app, use generic app_open action
+      return FlowAction(
+        type: 'app_open',
+        parameters: {'app_name': appName},
+      );
+    }
+
+    // Specific Gmail patterns
+    if ((lower.contains('gmail') || lower.contains('email') || lower.contains('mail')) &&
+        (lower.contains('read') || lower.contains('check') || lower.contains('open'))) {
+      return FlowAction(
+        type: 'app_read_gmail',
+        parameters: {},
+      );
+    }
+
+    // Specific Weather patterns
+    if ((lower.contains('weather') || lower.contains('forecast')) &&
+        (lower.contains('read') || lower.contains('check') || lower.contains('open') || lower.contains('what'))) {
+      return FlowAction(
+        type: 'app_read_weather',
+        parameters: {},
+      );
+    }
+
     // Brightness
     if (lower.contains('brightness')) {
       final level = number ?? (lower.contains('max') ? 100 : 50);

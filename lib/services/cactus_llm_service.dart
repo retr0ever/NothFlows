@@ -61,6 +61,10 @@ SYSTEM (11):
 - launch_app: app (string)
 - launch_care_app: (no params)
 
+APP INTEGRATION (2):
+- app_read_gmail: (no params) - opens Gmail and reads first unread email
+- app_read_weather: (no params) - opens Weather app and reads current forecast
+
 Examples:
 Input: "Make text large and boost brightness"
 Output: {"trigger": "mode.on:vision", "actions": [{"type": "increase_text_size", "to": "large"}, {"type": "boost_brightness", "to": 100}]}
@@ -481,6 +485,47 @@ Generate the DSL JSON:'''),
       mode: 'custom',
     );
     debugPrint('[CactusLLM] Warm-up complete');
+  }
+
+  /// Generate a text completion using the LLM
+  /// Returns the generated text or empty string on failure
+  Future<String> generateText({
+    required String systemPrompt,
+    required String userPrompt,
+    int maxTokens = 150,
+  }) async {
+    if (!isReady) {
+      debugPrint('[CactusLLM] Model not ready, cannot generate text');
+      return '';
+    }
+
+    try {
+      final messages = [
+        ChatMessage(role: 'system', content: systemPrompt),
+        ChatMessage(role: 'user', content: userPrompt),
+      ];
+
+      final result = await _llm!.generateCompletion(messages: messages);
+
+      if (!result.success || result.response.isEmpty) {
+        debugPrint('[CactusLLM] Text generation failed');
+        return '';
+      }
+
+      // Clean up the response
+      String text = result.response.trim();
+      
+      // Remove think tags if present
+      text = text.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '');
+      
+      // Remove special tokens
+      text = text.replaceAll(RegExp(r'<\|.*?\|>'), '');
+      
+      return text.trim();
+    } catch (e) {
+      debugPrint('[CactusLLM] Error generating text: $e');
+      return '';
+    }
   }
 
   /// Sanitize JSON output from LLM to fix common formatting issues
